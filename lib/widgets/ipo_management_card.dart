@@ -50,62 +50,6 @@ class IpoManagementCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (ipo.status != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(ipo.status!),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      ipo.status!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (ipo.sector != null || ipo.industry != null)
-              Text(
-                [ipo.sector, ipo.industry]
-                    .where((element) => element != null)
-                    .join(' • '),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-              ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (ipo.issuePrice != null && ipo.issuePrice! > 0)
-                  Expanded(
-                    child: _buildInfoItem(
-                      'Issue Price',
-                      '₹${ipo.issuePrice!.toStringAsFixed(2)}',
-                    ),
-                  ),
-                if (ipo.listingPrice != null && ipo.listingPrice! > 0)
-                  Expanded(
-                    child: _buildInfoItem(
-                      'Listing Price',
-                      '₹${ipo.listingPrice!.toStringAsFixed(2)}',
-                    ),
-                  ),
-                if (ipo.listingGain != null)
-                  Expanded(
-                    child: _buildInfoItem(
-                      'Gain',
-                      '${ipo.listingGain! >= 0 ? '+' : ''}${ipo.listingGain!.toStringAsFixed(2)}%',
-                      color: ipo.listingGain! >= 0 ? Colors.green : Colors.red,
-                    ),
-                  ),
               ],
             ),
             const SizedBox(height: 16),

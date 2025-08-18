@@ -10,10 +10,16 @@ class ApiService {
   // GET /api/ipos/company/:companyId – Fetch IPO data for a specific company
   static Future<IpoModel> getIpoByCompanyId(String companyId) async {
     try {
+      // debugPrint('DEBUG API: Fetching IPO for company ID: $companyId');
+      // debugPrint(
+      //     'DEBUG API: Request URL: $baseUrl/api/ipos/company/$companyId');
+
       final response = await http.get(
         Uri.parse('$baseUrl/api/ipos/company/$companyId'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(timeoutDuration);
+
+      // debugPrint('DEBUG API: Response status code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -37,11 +43,17 @@ class ApiService {
 
         return IpoModel.fromJson(ipoData);
       } else if (response.statusCode == 404) {
+        // debugPrint('DEBUG API: IPO not found (404) for company ID: $companyId');
+        // debugPrint(
+        //     'DEBUG API: Exception occurred: Exception: IPO not found for company ID: $companyId');
         throw Exception('IPO not found for company ID: $companyId');
       } else {
+        // debugPrint(
+        //     'DEBUG API: Failed to load IPO with status: ${response.statusCode}');
         throw Exception('Failed to load IPO: ${response.statusCode}');
       }
     } catch (e) {
+      // debugPrint('DEBUG API: Exception occurred: $e');
       throw Exception('Error fetching IPO for company $companyId: $e');
     }
   }

@@ -144,7 +144,7 @@ class FirebaseService {
     }
 
     try {
-      await db.collection(collectionName).doc(id).update(ipo.toFirestore());
+      await db.collection(iposCollectionName).doc(id).update(ipo.toFirestore());
     } catch (e) {
       throw Exception('Error updating IPO: $e');
     }
@@ -306,4 +306,167 @@ class FirebaseService {
       throw Exception('Error updating all IPO data: $e');
     }
   }
+
+  // Get available IPO options for dropdown selection
+  static Future<List<IpoOption>> getAvailableIpoOptions() async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final querySnapshot =
+          await db.collection(collectionName).orderBy('companyName').get();
+
+      final seenIds = <String>{};
+      final options = <IpoOption>[];
+
+      debugPrint(
+          'DEBUG: Total documents in Firebase: ${querySnapshot.docs.length}');
+
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+
+        // Try to get the correct API identifier
+        // Priority: ipo_id (numeric) > company_id > companyId > company_slug_name
+        String? apiId;
+        String? displayId;
+
+        // For API calls, prefer numeric ipo_id
+        if (data['ipo_id'] != null) {
+          apiId = data['ipo_id'].toString();
+        } else if (data['company_id'] != null) {
+          apiId = data['company_id'].toString();
+        } else if (data['companyId'] != null) {
+          apiId = data['companyId'].toString();
+        } else if (data['company_slug_name'] != null) {
+          apiId = data['company_slug_name'].toString();
+        }
+
+        // For display, prefer company_slug_name or companyId
+        if (data['company_slug_name'] != null) {
+          displayId = data['company_slug_name'].toString();
+        } else if (data['companyId'] != null) {
+          displayId = data['companyId'].toString();
+        } else if (data['ipo_id'] != null) {
+          displayId = data['ipo_id'].toString();
+        }
+
+        final companyName = data['companyName']?.toString() ??
+            data['company_name']?.toString() ??
+            displayId ??
+            apiId ??
+            '';
+
+        final category = data['category']?.toString() ?? 'unknown';
+
+        debugPrint(
+            'DEBUG: Processing IPO - ID: $apiId, Name: $companyName, Category: $category, Seen: ${seenIds.contains(apiId)}');
+
+        if (apiId != null && apiId.isNotEmpty && !seenIds.contains(apiId)) {
+          seenIds.add(apiId);
+          options.add(IpoOption(
+            companyId: apiId, // Use the API-compatible ID
+            companyName: companyName,
+            category: category,
+          ));
+          debugPrint(
+              'DEBUG: Added IPO option - ID: $apiId, Name: $companyName');
+        } else if (apiId != null && seenIds.contains(apiId)) {
+          debugPrint(
+              'DEBUG: Skipped duplicate IPO - ID: $apiId, Name: $companyName, Category: $category');
+        }
+      }
+
+      debugPrint('DEBUG: Final unique IPO options count: ${options.length}');
+      debugPrint(
+          'DEBUG: Unique IPO IDs: ${options.map((o) => o.companyId).toList()}');
+
+      return options;
+    } catch (e) {
+      throw Exception('Error fetching available IPO options: $e');
+    }
+  }
+
+  // Check if multiple IPOs exist by company IDs
+  static Future<List<String>> getExistingIpoIds(List<String> companyIds) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final existingIds = <String>[];
+
+      // Check in batches to avoid Firestore query limitations
+      const batchSize = 10;
+      for (int i = 0; i < companyIds.length; i += batchSize) {
+        final batch = companyIds.skip(i).take(batchSize).toList();
+
+        final querySnapshot = await db
+            .collection(iposCollectionName)
+            .where('companyId', whereIn: batch)
+            .get();
+
+        for (final doc in querySnapshot.docs) {
+          final data = doc.data();
+          final companyId = data['companyId']?.toString();
+          if (companyId != null) {
+            existingIds.add(companyId);
+          }
+        }
+      }
+
+      return existingIds;
+    } catch (e) {
+      throw Exception('Error checking existing IPO IDs: $e');
+    }
+  }
+}
+
+// Data class for IPO dropdown options
+class IpoOption {
+  final String companyId;
+  final String companyName;
+  final String? category;
+
+  IpoOption({
+    required this.companyId,
+    required this.companyName,
+    this.category,
+  });
+
+  String get displayName {
+    if (category != null) {
+      return '$companyName ($companyId) - ${_formatCategory(category!)}';
+    }
+    return '$companyName ($companyId)';
+  }
+
+  String _formatCategory(String category) {
+    switch (category) {
+      case 'draft_issues':
+        return 'Draft';
+      case 'upcoming_open':
+        return 'Upcoming';
+      case 'listing_soon':
+        return 'Listing Soon';
+      case 'recently_listed':
+        return 'Recently Listed';
+      case 'gain_loss_analysis':
+        return 'Gain/Loss';
+      default:
+        return category;
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is IpoOption &&
+          runtimeType == other.runtimeType &&
+          companyId == other.companyId;
+
+  @override
+  int get hashCode => companyId.hashCode;
 }

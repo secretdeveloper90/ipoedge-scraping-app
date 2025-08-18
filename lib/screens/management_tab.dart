@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/ipo_model.dart';
 import '../services/api_service.dart';
 import '../services/firebase_service.dart';
+import '../widgets/bulk_add_ipo_modal.dart';
 
 class ManagementTab extends StatefulWidget {
   const ManagementTab({super.key});
@@ -11,7 +12,6 @@ class ManagementTab extends StatefulWidget {
 }
 
 class _ManagementTabState extends State<ManagementTab> {
-  final TextEditingController _companyIdController = TextEditingController();
   List<IpoModel> _savedIpos = [];
   bool _isLoading = false;
   bool _isLoadingSavedIpos = true;
@@ -25,7 +25,6 @@ class _ManagementTabState extends State<ManagementTab> {
 
   @override
   void dispose() {
-    _companyIdController.dispose();
     super.dispose();
   }
 
@@ -53,57 +52,6 @@ class _ManagementTabState extends State<ManagementTab> {
       setState(() {
         _error = e.toString();
         _isLoadingSavedIpos = false;
-      });
-    }
-  }
-
-  Future<void> _addIpo() async {
-    final companyId = _companyIdController.text.trim();
-    if (companyId.isEmpty) {
-      _showSnackBar('Please enter a company ID', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      print('Starting to add IPO for company ID: $companyId');
-
-      // Check if IPO already exists
-      print('Checking if IPO exists...');
-      final exists = await FirebaseService.ipoExistsByCompanyId(companyId);
-      if (exists) {
-        print('IPO already exists for company ID: $companyId');
-        _showSnackBar('IPO with this company ID already exists', isError: true);
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // Fetch IPO data from API
-      print('Fetching IPO data from API...');
-      final ipo = await ApiService.getIpoByCompanyId(companyId);
-      print('IPO data fetched successfully: ${ipo.companyName}');
-
-      // Save to Firebase
-      print('Saving IPO to Firebase...');
-      await FirebaseService.addIpo(ipo);
-      print('IPO saved to Firebase successfully');
-
-      _showSnackBar('IPO added successfully');
-      _companyIdController.clear();
-      _loadSavedIpos();
-    } catch (e) {
-      print('Error adding IPO: $e');
-      print('Error type: ${e.runtimeType}');
-      _showSnackBar('Error adding IPO: $e', isError: true);
-    } finally {
-      setState(() {
-        _isLoading = false;
       });
     }
   }
@@ -182,6 +130,15 @@ class _ManagementTabState extends State<ManagementTab> {
     return result ?? false;
   }
 
+  void _openBulkAddModal() {
+    showDialog(
+      context: context,
+      builder: (context) => BulkAddIpoModal(
+        onIposAdded: _loadSavedIpos,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,45 +153,29 @@ class _ManagementTabState extends State<ManagementTab> {
   }
 
   Widget _buildAddSection() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Add New IPO',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: ElevatedButton.icon(
+        onPressed: _openBulkAddModal,
+        icon: const Icon(Icons.add_circle, size: 20),
+        label: const Text(
+          'Add IPOs',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _companyIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Company ID',
-                    hintText: 'Enter company ID',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: !_isLoading,
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _addIpo,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Add'),
-              ),
-            ],
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          elevation: 3,
+          shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
+        ),
       ),
     );
   }
@@ -373,73 +314,107 @@ class _ManagementTabState extends State<ManagementTab> {
                 MediaQuery.of(context).size.width - 32, // Account for padding
           ),
           child: DataTable(
-            columnSpacing: 20,
+            columnSpacing: 12,
             horizontalMargin: 16,
-            headingRowHeight: 50,
-            dataRowMinHeight: 48,
-            dataRowMaxHeight: 48,
+            headingRowHeight: 56,
+            dataRowMinHeight: 72,
+            dataRowMaxHeight: 72,
             headingTextStyle: TextStyle(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).primaryColor,
               fontSize: 16,
             ),
-            columns: const [
+            columns: [
               DataColumn(
-                label: Text('IPO ID'),
+                label: Container(
+                  width: 50,
+                  child: const Text('IPO ID'),
+                ),
               ),
               DataColumn(
-                label: Text('Company Name'),
+                label: Container(
+                  width: 150,
+                  child: const Text('Company Name'),
+                ),
               ),
               DataColumn(
-                label: Text('Actions'),
+                label: Container(
+                  width: 120,
+                  child: const Text('Actions'),
+                ),
               ),
             ],
             rows: _savedIpos.map((ipo) {
               return DataRow(
                 cells: [
                   DataCell(
-                    Text(
-                      ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).primaryColor,
+                    Container(
+                      width: 50,
+                      child: Text(
+                        ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
                       ),
                     ),
                   ),
                   DataCell(
-                    Text(
-                      ipo.companyName?.isNotEmpty == true
-                          ? ipo.companyName!
-                          : ipo.companyId.isNotEmpty
-                              ? ipo.companyId
-                              : 'Unknown Company',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    Container(
+                      width: 180,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        ipo.companyName?.isNotEmpty == true
+                            ? ipo.companyName!
+                            : ipo.companyId.isNotEmpty
+                                ? ipo.companyId
+                                : 'Unknown Company',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 3,
                       ),
                     ),
                   ),
                   DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.refresh),
-                          color: Colors.orange,
-                          onPressed: () => _updateIpo(ipo),
-                          tooltip: 'Update',
-                          iconSize: 20,
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          color: Colors.red,
-                          onPressed: () => _deleteIpo(ipo),
-                          tooltip: 'Delete',
-                          iconSize: 20,
-                        ),
-                      ],
+                    Container(
+                      width: 100,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            color: Colors.orange,
+                            onPressed: () => _updateIpo(ipo),
+                            tooltip: 'Update',
+                            iconSize: 18,
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            color: Colors.red,
+                            onPressed: () => _deleteIpo(ipo),
+                            tooltip: 'Delete',
+                            iconSize: 18,
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
