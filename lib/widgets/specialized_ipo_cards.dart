@@ -46,7 +46,7 @@ abstract class BaseIpoCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1), 
+                  color: Colors.black.withOpacity(0.1),
                   blurRadius: 8,
                   offset: const Offset(2, 4),
                 ),
@@ -316,10 +316,10 @@ class ListingSoonCard extends BaseIpoCard {
             if (constraints.maxWidth < 320) {
               return Column(
                 children: [
-                  if (ipo.allotmentDate != null) ...[
+                  if (_getAllotmentDate(ipo) != null) ...[
                     buildInfoRow(
                       'Allotment Date',
-                      IpoFormatters.formatDate(ipo.allotmentDate),
+                      IpoFormatters.formatDate(_getAllotmentDate(ipo)),
                       Icons.assignment,
                     ),
                     const SizedBox(height: 10),
@@ -332,13 +332,14 @@ class ListingSoonCard extends BaseIpoCard {
                     ),
                     const SizedBox(height: 10),
                   ],
-                  if (ipo.totalSubscription != null)
+                  if (_getTotalSubscription(ipo) != null)
                     buildInfoRow(
                       'Total Subscription',
-                      IpoFormatters.formatSubscription(ipo.totalSubscription),
+                      IpoFormatters.formatSubscription(
+                          _getTotalSubscription(ipo)),
                       Icons.analytics,
                       valueColor: IpoFormatters.getSubscriptionColor(
-                          ipo.totalSubscription),
+                          _getTotalSubscription(ipo)),
                     ),
                 ],
               );
@@ -347,15 +348,16 @@ class ListingSoonCard extends BaseIpoCard {
               children: [
                 Row(
                   children: [
-                    if (ipo.allotmentDate != null)
+                    if (_getAllotmentDate(ipo) != null)
                       Expanded(
                         child: buildInfoRow(
                           'Allotment Date',
-                          IpoFormatters.formatDate(ipo.allotmentDate),
+                          IpoFormatters.formatDate(_getAllotmentDate(ipo)),
                           Icons.assignment,
                         ),
                       ),
-                    if (ipo.allotmentDate != null && ipo.listingDate != null)
+                    if (_getAllotmentDate(ipo) != null &&
+                        ipo.listingDate != null)
                       const SizedBox(width: 14),
                     if (ipo.listingDate != null)
                       Expanded(
@@ -367,14 +369,15 @@ class ListingSoonCard extends BaseIpoCard {
                       ),
                   ],
                 ),
-                if (ipo.totalSubscription != null) ...[
+                if (_getTotalSubscription(ipo) != null) ...[
                   const SizedBox(height: 14),
                   buildInfoRow(
                     'Total Subscription',
-                    IpoFormatters.formatSubscription(ipo.totalSubscription),
+                    IpoFormatters.formatSubscription(
+                        _getTotalSubscription(ipo)),
                     Icons.analytics,
                     valueColor: IpoFormatters.getSubscriptionColor(
-                        ipo.totalSubscription),
+                        _getTotalSubscription(ipo)),
                   ),
                 ],
               ],
@@ -512,15 +515,15 @@ class GainLossAnalysisCard extends BaseIpoCard {
                     ),
                     const SizedBox(height: 10),
                   ],
-                  if (ipo.currentGain != null)
+                  if (_getCurrentGain(ipo) != null)
                     buildInfoRow(
                       'Current Gain/Loss',
-                      IpoFormatters.formatPercentage(ipo.currentGain),
-                      ipo.currentGain! >= 0
+                      IpoFormatters.formatPercentage(_getCurrentGain(ipo)),
+                      _getCurrentGain(ipo)! >= 0
                           ? Icons.trending_up
                           : Icons.trending_down,
-                      valueColor:
-                          IpoFormatters.getPercentageColor(ipo.currentGain),
+                      valueColor: IpoFormatters.getPercentageColor(
+                          _getCurrentGain(ipo)),
                     ),
                 ],
               );
@@ -539,18 +542,18 @@ class GainLossAnalysisCard extends BaseIpoCard {
                           IpoFormatters.getPercentageColor(ipo.listingGain),
                     ),
                   ),
-                if (ipo.listingGain != null && ipo.currentGain != null)
+                if (ipo.listingGain != null && _getCurrentGain(ipo) != null)
                   const SizedBox(width: 14),
-                if (ipo.currentGain != null)
+                if (_getCurrentGain(ipo) != null)
                   Expanded(
                     child: buildInfoRow(
                       'Current Gain/Loss',
-                      IpoFormatters.formatPercentage(ipo.currentGain),
-                      ipo.currentGain! >= 0
+                      IpoFormatters.formatPercentage(_getCurrentGain(ipo)),
+                      _getCurrentGain(ipo)! >= 0
                           ? Icons.trending_up
                           : Icons.trending_down,
-                      valueColor:
-                          IpoFormatters.getPercentageColor(ipo.currentGain),
+                      valueColor: IpoFormatters.getPercentageColor(
+                          _getCurrentGain(ipo)),
                     ),
                   ),
               ],
@@ -560,4 +563,33 @@ class GainLossAnalysisCard extends BaseIpoCard {
       ],
     );
   }
+}
+
+// Helper functions to access additional data fields
+String? _getAllotmentDate(IpoModel ipo) {
+  return ipo.additionalData?['allotment_date']?.toString() ??
+      ipo.additionalData?['allotmentDate']?.toString() ??
+      ipo.additionalData?['basis_of_allotment_date']?.toString();
+}
+
+double? _getTotalSubscription(IpoModel ipo) {
+  final value = ipo.additionalData?['total_subscription'] ??
+      ipo.additionalData?['totalSubscription'] ??
+      ipo.additionalData?['subscription_times'] ??
+      ipo.additionalData?['subscription'];
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+double? _getCurrentGain(IpoModel ipo) {
+  final value = ipo.additionalData?['current_gain'] ??
+      ipo.additionalData?['currentGain'] ??
+      ipo.additionalData?['current_gain_percent'] ??
+      ipo.additionalData?['current_gainP'];
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
 }

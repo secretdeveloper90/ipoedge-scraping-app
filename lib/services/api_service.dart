@@ -167,33 +167,4 @@ class ApiService {
       return false;
     }
   }
-
-  // Helper method to get available years for screener
-  static Future<List<int>> getAvailableYears() async {
-    try {
-      final categorizedIpos = await getCategorizedIpos();
-      final years = <int>{};
-
-      // Combine all IPOs from all categories
-      for (final categoryIpos in categorizedIpos.values) {
-        for (final ipo in categoryIpos) {
-          if (ipo.listingDate != null) {
-            try {
-              final date = DateTime.parse(ipo.listingDate!);
-              years.add(date.year);
-            } catch (e) {
-              // Skip invalid dates
-            }
-          }
-        }
-      }
-
-      final sortedYears = years.toList()..sort((a, b) => b.compareTo(a));
-      return sortedYears;
-    } catch (e) {
-      // Return default years if API call fails
-      final currentYear = DateTime.now().year;
-      return List.generate(5, (index) => currentYear - index);
-    }
-  }
 }

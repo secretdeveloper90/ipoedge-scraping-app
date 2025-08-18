@@ -3,14 +3,12 @@ import '../models/ipo_model.dart';
 
 class IpoManagementCard extends StatelessWidget {
   final IpoModel ipo;
-  final VoidCallback onView;
   final VoidCallback onUpdate;
   final VoidCallback onDelete;
 
   const IpoManagementCard({
     super.key,
     required this.ipo,
-    required this.onView,
     required this.onUpdate,
     required this.onDelete,
   });
@@ -114,12 +112,6 @@ class IpoManagementCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildActionButton(
-                  icon: Icons.visibility,
-                  label: 'View',
-                  onPressed: onView,
-                  color: Colors.blue,
-                ),
                 _buildActionButton(
                   icon: Icons.refresh,
                   label: 'Update',

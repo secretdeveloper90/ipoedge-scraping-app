@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/ipo_model.dart';
 import '../services/api_service.dart';
 import '../services/firebase_service.dart';
-import '../widgets/ipo_management_card.dart';
 
 class ManagementTab extends StatefulWidget {
   const ManagementTab({super.key});
@@ -251,14 +250,15 @@ class _ManagementTabState extends State<ManagementTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Saved IPOs',
+                  'Saved IPOs (${_savedIpos.length})',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: 18,
                       ),
                 ),
                 IconButton(
                   onPressed: _loadSavedIpos,
-                  icon: const Icon(Icons.refresh),
+                  icon: const Icon(Icons.refresh, size: 24),
                   tooltip: 'Refresh',
                 ),
               ],
@@ -339,81 +339,115 @@ class _ManagementTabState extends State<ManagementTab> {
       );
     }
 
-    return ListView.builder(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      itemCount: _savedIpos.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: IpoManagementCard(
-            ipo: _savedIpos[index],
-            onView: () => _showIpoDetails(_savedIpos[index]),
-            onUpdate: () => _updateIpo(_savedIpos[index]),
-            onDelete: () => _deleteIpo(_savedIpos[index]),
-          ),
-        );
-      },
+      child: _buildManagementDataTable(),
     );
   }
 
-  void _showIpoDetails(IpoModel ipo) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(ipo.companyName ?? 'IPO Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Company ID', ipo.companyId),
-              _buildDetailRow('Sector', ipo.sector),
-              _buildDetailRow('Industry', ipo.industry),
-              _buildDetailRow('Issue Price', ipo.issuePrice?.toString()),
-              _buildDetailRow('Issue Size', ipo.issueSize),
-              _buildDetailRow('Listing Date', ipo.listingDate),
-              _buildDetailRow('Open Date', ipo.openDate),
-              _buildDetailRow('Close Date', ipo.closeDate),
-              _buildDetailRow('Listing Price', ipo.listingPrice?.toString()),
-              _buildDetailRow('Listing Gain', ipo.listingGain?.toString()),
-              _buildDetailRow('Status', ipo.status),
-              if (ipo.createdAt != null)
-                _buildDetailRow('Added', ipo.createdAt.toString()),
-              if (ipo.updatedAt != null)
-                _buildDetailRow('Updated', ipo.updatedAt.toString()),
+  Widget _buildManagementDataTable() {
+    return SingleChildScrollView(
+        child: Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth:
+                MediaQuery.of(context).size.width - 32, // Account for padding
+          ),
+          child: DataTable(
+            columnSpacing: 20,
+            horizontalMargin: 16,
+            headingRowHeight: 50,
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 48,
+            headingTextStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+              fontSize: 16,
+            ),
+            columns: const [
+              DataColumn(
+                label: Text('IPO ID'),
+              ),
+              DataColumn(
+                label: Text('Company Name'),
+              ),
+              DataColumn(
+                label: Text('Actions'),
+              ),
             ],
+            rows: _savedIpos.map((ipo) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(
+                      ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      ipo.companyName?.isNotEmpty == true
+                          ? ipo.companyName!
+                          : ipo.companyId.isNotEmpty
+                              ? ipo.companyId
+                              : 'Unknown Company',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          color: Colors.orange,
+                          onPressed: () => _updateIpo(ipo),
+                          tooltip: 'Update',
+                          iconSize: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          color: Colors.red,
+                          onPressed: () => _deleteIpo(ipo),
+                          tooltip: 'Delete',
+                          iconSize: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
+    ));
   }
 }

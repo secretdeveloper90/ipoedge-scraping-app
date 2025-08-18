@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ipo_model.dart';
 import '../services/firebase_service.dart';
-import '../widgets/ipo_card.dart';
-import '../widgets/specialized_ipo_cards.dart';
 
 class ListingTab extends StatefulWidget {
   const ListingTab({super.key});
@@ -65,8 +63,14 @@ class _ListingTabState extends State<ListingTab> {
       if (category != null && categorized.containsKey(category)) {
         categorized[category]!.add(ipo);
       } else {
-        // Fallback: categorize based on status or other fields
-        final status = ipo.status?.toLowerCase() ?? '';
+        // Fallback: categorize based on status or other fields from additionalData
+        final status =
+            (ipo.additionalData?['status']?.toString() ?? '').toLowerCase();
+        final listingDate = ipo.additionalData?['listing_date']?.toString() ??
+            ipo.additionalData?['listingDate']?.toString();
+        final listingGain = ipo.additionalData?['listing_gain'] ??
+            ipo.additionalData?['listingGain'] ??
+            ipo.additionalData?['listing_gainP'];
 
         if (status.contains('draft') || status.contains('drhp')) {
           categorized['draft_issues']!.add(ipo);
@@ -74,8 +78,8 @@ class _ListingTabState extends State<ListingTab> {
           categorized['upcoming_open']!.add(ipo);
         } else if (status.contains('listing') && !status.contains('listed')) {
           categorized['listing_soon']!.add(ipo);
-        } else if (status.contains('listed') || ipo.listingDate != null) {
-          if (ipo.listingGain != null || ipo.currentGain != null) {
+        } else if (status.contains('listed') || listingDate != null) {
+          if (listingGain != null) {
             categorized['gain_loss_analysis']!.add(ipo);
           } else {
             categorized['recently_listed']!.add(ipo);
@@ -374,111 +378,89 @@ class _ListingTabState extends State<ListingTab> {
             ],
           ),
         ),
-        ...ipos.asMap().entries.map((entry) {
-          final index = entry.key;
-          final ipo = entry.value;
-          return AnimatedContainer(
-            duration: Duration(milliseconds: 200 + (index * 50)),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 14.0),
-              child: _buildSpecializedCard(categoryKey, ipo),
-            ),
-          );
-        }),
+        _buildDataTable(ipos),
         const SizedBox(height: 8),
       ],
     );
   }
 
-  Widget _buildSpecializedCard(String categoryKey, IpoModel ipo) {
-    switch (categoryKey) {
-      case 'draft_issues':
-        return DraftIssueCard(
-          ipo: ipo,
-          onTap: () => _showIpoDetails(ipo),
-        );
-      case 'upcoming_open':
-        return UpcomingOpenCard(
-          ipo: ipo,
-          onTap: () => _showIpoDetails(ipo),
-        );
-      case 'listing_soon':
-        return ListingSoonCard(
-          ipo: ipo,
-          onTap: () => _showIpoDetails(ipo),
-        );
-      case 'recently_listed':
-        return RecentlyListedCard(
-          ipo: ipo,
-          onTap: () => _showIpoDetails(ipo),
-        );
-      case 'gain_loss_analysis':
-        return GainLossAnalysisCard(
-          ipo: ipo,
-          onTap: () => _showIpoDetails(ipo),
-        );
-      default:
-        // Fallback to generic card for unknown categories
-        return IpoCard(
-          ipo: ipo,
-          onTap: () => _showIpoDetails(ipo),
-        );
-    }
-  }
-
-  void _showIpoDetails(IpoModel ipo) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(ipo.companyName ?? 'IPO Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Company ID', ipo.companyId),
-              _buildDetailRow('Sector', ipo.sector),
-              _buildDetailRow('Industry', ipo.industry),
-              _buildDetailRow('Issue Price', ipo.issuePrice?.toString()),
-              _buildDetailRow('Issue Size', ipo.issueSize),
-              _buildDetailRow('Listing Date', ipo.listingDate),
-              _buildDetailRow('Open Date', ipo.openDate),
-              _buildDetailRow('Close Date', ipo.closeDate),
-              _buildDetailRow('Listing Price', ipo.listingPrice?.toString()),
-              _buildDetailRow('Listing Gain', ipo.listingGain?.toString()),
-              _buildDetailRow('Status', ipo.status),
-            ],
-          ),
+  Widget _buildDataTable(List<IpoModel> ipos) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth:
+                MediaQuery.of(context).size.width - 40, // Account for padding
+          ),
+          child: DataTable(
+            columnSpacing: 20,
+            horizontalMargin: 16,
+            headingRowHeight: 50,
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 48,
+            headingTextStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+              fontSize: 16,
             ),
+            columns: const [
+              DataColumn(
+                label: Text('Sr. No.'),
+              ),
+              DataColumn(
+                label: Text('Company Name'),
+              ),
+            ],
+            rows: ipos.asMap().entries.map((entry) {
+              final index = entry.key;
+              final ipo = entry.value;
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      ipo.companyName ??
+                          (ipo.companyId.isNotEmpty
+                              ? ipo.companyId
+                              : 'Unknown Company'),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
+        ),
       ),
     );
   }

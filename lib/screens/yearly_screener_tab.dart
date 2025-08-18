@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ipo_model.dart';
 import '../services/api_service.dart';
-import '../widgets/ipo_card.dart';
 
 class YearlyScreenerTab extends StatefulWidget {
   const YearlyScreenerTab({super.key});
@@ -29,30 +28,16 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
       _isLoadingYears = true;
     });
 
-    try {
-      final years = await ApiService.getAvailableYears();
-      setState(() {
-        _availableYears = years;
-        _selectedYear = years.isNotEmpty ? years.first : DateTime.now().year;
-        _isLoadingYears = false;
-      });
-      
-      if (_selectedYear != null) {
-        _loadIposByYear(_selectedYear!);
-      }
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoadingYears = false;
-        // Set default years if API fails
-        final currentYear = DateTime.now().year;
-        _availableYears = List.generate(5, (index) => currentYear - index);
-        _selectedYear = currentYear;
-      });
-      
-      if (_selectedYear != null) {
-        _loadIposByYear(_selectedYear!);
-      }
+    // Set default years with current year as default
+    final currentYear = DateTime.now().year;
+    setState(() {
+      _availableYears = List.generate(5, (index) => currentYear - index);
+      _selectedYear = currentYear;
+      _isLoadingYears = false;
+    });
+
+    if (_selectedYear != null) {
+      _loadIposByYear(_selectedYear!);
     }
   }
 
@@ -109,8 +94,8 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
           Text(
             'IPO Screener',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -183,8 +168,8 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
               _error!,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -219,8 +204,8 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
                   ? 'No IPOs found for year $_selectedYear'
                   : 'Select a year to view IPOs',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
           ],
         ),
@@ -237,96 +222,134 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
               Text(
                 'IPOs for $_selectedYear',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               Text(
                 '${_ipos.length} IPOs',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                      color: Colors.grey[600],
+                    ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => _loadIposByYear(_selectedYear!),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              itemCount: _ipos.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: IpoCard(
-                    ipo: _ipos[index],
-                    onTap: () => _showIpoDetails(_ipos[index]),
-                    showYear: false, // Don't show year since we're filtering by year
+          child: _ipos.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No IPOs found',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No IPOs available for the selected year',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          ),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => _loadIposByYear(_selectedYear!),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _buildDataTable(),
+                  ),
+                ),
         ),
       ],
     );
   }
 
-  void _showIpoDetails(IpoModel ipo) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(ipo.companyName ?? 'IPO Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Company ID', ipo.companyId),
-              _buildDetailRow('Sector', ipo.sector),
-              _buildDetailRow('Industry', ipo.industry),
-              _buildDetailRow('Issue Price', ipo.issuePrice?.toString()),
-              _buildDetailRow('Issue Size', ipo.issueSize),
-              _buildDetailRow('Listing Date', ipo.listingDate),
-              _buildDetailRow('Open Date', ipo.openDate),
-              _buildDetailRow('Close Date', ipo.closeDate),
-              _buildDetailRow('Listing Price', ipo.listingPrice?.toString()),
-              _buildDetailRow('Listing Gain', ipo.listingGain?.toString()),
-              _buildDetailRow('Status', ipo.status),
+  Widget _buildDataTable() {
+    return SingleChildScrollView(
+        child: Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: MediaQuery.of(context).size.width - 32,
+          ),
+          child: DataTable(
+            columnSpacing: 20,
+            horizontalMargin: 16,
+            headingRowHeight: 50,
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 48,
+            headingTextStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+              fontSize: 16,
+            ),
+            columns: const [
+              DataColumn(
+                label: Text('Sr. No.'),
+              ),
+              DataColumn(
+                label: Text('Company Name'),
+              ),
             ],
+            rows: _ipos.asMap().entries.map((entry) {
+              final index = entry.key;
+              final ipo = entry.value;
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      ipo.companyName ??
+                          (ipo.companyId.isNotEmpty
+                              ? ipo.companyId
+                              : 'Unknown Company'),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
+    ));
   }
 }
