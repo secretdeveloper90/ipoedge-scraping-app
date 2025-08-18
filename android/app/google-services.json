@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "808916156790",
+    "project_id": "ipoedge-app",
+    "storage_bucket": "ipoedge-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:808916156790:android:7dba3ea7ac6b18e8527a57",
+        "android_client_info": {
+          "package_name": "com.example.ipoedge_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATdk2DYbHuJYmoscp4IIFw2uvL1r81Anc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:808916156790:android:7e6e8b93e831c2ad527a57",
+        "android_client_info": {
+          "package_name": "com.ipoedge.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATdk2DYbHuJYmoscp4IIFw2uvL1r81Anc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
