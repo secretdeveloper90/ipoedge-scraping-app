@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   'IPO Edge Admin Panel',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
                       ),

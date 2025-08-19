@@ -408,13 +408,13 @@ class _ManagementTabState extends State<ManagementTab> {
               ),
               DataColumn(
                 label: Container(
-                  width: 150,
+                  width: 120,
                   child: const Text('Company Name'),
                 ),
               ),
               DataColumn(
                 label: Container(
-                  width: 120,
+                  width: 90,
                   child: const Text('Actions'),
                 ),
               ),
@@ -439,7 +439,7 @@ class _ManagementTabState extends State<ManagementTab> {
                   ),
                   DataCell(
                     Container(
-                      width: 180,
+                      width: 120,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
                         ipo.companyName?.isNotEmpty == true
