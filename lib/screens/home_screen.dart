@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'listing_tab.dart';
-import 'management_tab.dart';
-import 'yearly_screener_tab.dart';
+import 'ipo_screen.dart';
+import 'notifications_screen.dart';
+import 'news_screen.dart';
+import 'broker_screen.dart';
+import 'buyback_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,38 +15,48 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _tabs = [
-    const ListingTab(),
-    const ManagementTab(),
-    const YearlyScreenerTab(),
+  final List<Widget> _screens = [
+    const IpoScreen(),
+    const NotificationsScreen(),
+    const NewsScreen(),
+    const BrokerScreen(),
+    const BuybackScreen(),
   ];
 
-  final List<_TabInfo> _tabInfo = [
-    const _TabInfo(
+  final List<_DrawerItem> _drawerItems = [
+    const _DrawerItem(
       icon: Icons.trending_up_rounded,
-      activeIcon: Icons.trending_up_rounded,
-      label: 'Listing',
-      tooltip: 'View IPO Listings',
+      label: 'IPO Management',
+      tooltip: 'Manage IPO listings and data',
     ),
-    const _TabInfo(
-      icon: Icons.dashboard_customize_outlined,
-      activeIcon: Icons.dashboard_customize_rounded,
-      label: 'Management',
-      tooltip: 'Manage IPOs',
+    const _DrawerItem(
+      icon: Icons.notifications_rounded,
+      label: 'Notifications',
+      tooltip: 'View and manage notifications',
     ),
-    const _TabInfo(
-      icon: Icons.analytics_outlined,
-      activeIcon: Icons.analytics_rounded,
-      label: 'Screener',
-      tooltip: 'Yearly Analysis',
+    const _DrawerItem(
+      icon: Icons.newspaper_rounded,
+      label: 'Financial News',
+      tooltip: 'Latest financial news and updates',
+    ),
+    const _DrawerItem(
+      icon: Icons.business_rounded,
+      label: 'Brokers',
+      tooltip: 'Broker information and management',
+    ),
+    const _DrawerItem(
+      icon: Icons.account_balance_wallet_rounded,
+      label: 'Buybacks',
+      tooltip: 'Stock buyback data and analysis',
     ),
   ];
 
-  void _onTabTapped(int index) {
+  void _onDrawerItemTapped(int index) {
     if (index != _currentIndex) {
       setState(() {
         _currentIndex = index;
       });
+      Navigator.of(context).pop(); // Close drawer
     }
   }
 
@@ -53,9 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
       appBar: _buildModernAppBar(context, colorScheme),
+      drawer: _buildNavigationDrawer(context, colorScheme),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -67,15 +78,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        child: SafeArea(
-          child: IndexedStack(
-            index: _currentIndex,
-            children: _tabs,
-          ),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
         ),
       ),
-      bottomNavigationBar:
-          _buildModernBottomNavigationBar(context, colorScheme),
     );
   }
 
@@ -83,7 +90,6 @@ class _HomeScreenState extends State<HomeScreen> {
       BuildContext context, ColorScheme colorScheme) {
     return AppBar(
       title: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -92,31 +98,37 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              _tabInfo[_currentIndex].activeIcon,
+              _drawerItems[_currentIndex].icon,
               color: colorScheme.primary,
               size: 24,
             ),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'IPO Edge Admin Panel',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-              ),
-              Text(
-                _tabInfo[_currentIndex].label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'IPO Edge Admin Panel',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Text(
+                  _drawerItems[_currentIndex].label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -135,64 +147,228 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildModernBottomNavigationBar(
-      BuildContext context, ColorScheme colorScheme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+  Widget _buildNavigationDrawer(BuildContext context, ColorScheme colorScheme) {
+    return Drawer(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colorScheme.surface,
+              colorScheme.surface.withOpacity(0.95),
+            ],
           ),
-        ],
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(20),
+        ),
+        child: Column(
+          children: [
+            _buildDrawerHeader(context, colorScheme),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: _drawerItems.length,
+                itemBuilder: (context, index) {
+                  final item = _drawerItems[index];
+                  final isSelected = index == _currentIndex;
+
+                  return Container(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: isSelected
+                          ? colorScheme.primary.withOpacity(0.1)
+                          : Colors.transparent,
+                    ),
+                    child: ListTile(
+                      leading: Icon(
+                        item.icon,
+                        color: isSelected
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                        size: 24,
+                      ),
+                      title: Text(
+                        item.label,
+                        style: TextStyle(
+                          color: isSelected
+                              ? colorScheme.primary
+                              : colorScheme.onSurface,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                      onTap: () => _onDrawerItemTapped(index),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: _onTabTapped,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: colorScheme.primary,
-          unselectedItemColor: colorScheme.onSurfaceVariant,
-          selectedFontSize: 12,
-          unselectedFontSize: 11,
-          items: _tabInfo.asMap().entries.map((entry) {
-            final index = entry.key;
-            final tabInfo = entry.value;
-            final isSelected = index == _currentIndex;
+    );
+  }
 
-            return BottomNavigationBarItem(
-              icon: Icon(
-                isSelected ? tabInfo.activeIcon : tabInfo.icon,
-              ),
-              label: tabInfo.label,
-              tooltip: tabInfo.tooltip,
-            );
-          }).toList(),
+  Widget _buildDrawerHeader(BuildContext context, ColorScheme colorScheme) {
+    return Container(
+      height: 150,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colorScheme.primary,
+            colorScheme.primary.withOpacity(0.8),
+            colorScheme.secondary.withOpacity(0.6),
+          ],
+          stops: const [0.0, 0.7, 1.0],
         ),
+      ),
+      child: Stack(
+        children: [
+          // Background pattern for visual appeal
+          Positioned(
+            top: -50,
+            right: -50,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 20,
+            right: 20,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -30,
+            left: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
+              ),
+            ),
+          ),
+          // Main content
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // User profile section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Admin User',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              Text(
+                                'System Administrator',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'Online',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 10,
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _TabInfo {
+class _DrawerItem {
   final IconData icon;
-  final IconData activeIcon;
   final String label;
   final String tooltip;
 
-  const _TabInfo({
+  const _DrawerItem({
     required this.icon,
-    required this.activeIcon,
     required this.label,
     required this.tooltip,
   });

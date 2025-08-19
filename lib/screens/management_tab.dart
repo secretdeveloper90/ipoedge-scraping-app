@@ -160,7 +160,7 @@ class _ManagementTabState extends State<ManagementTab> {
   Widget _buildAddSection() {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      margin: const EdgeInsets.all(8),
       child: ElevatedButton.icon(
         onPressed: _openBulkAddModal,
         icon: const Icon(Icons.add_circle, size: 20),
