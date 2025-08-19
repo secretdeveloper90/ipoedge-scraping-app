@@ -147,7 +147,7 @@ class _ListingTabState extends State<ListingTab> {
           // Fixed button positioning with proper margins
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
             child: ElevatedButton.icon(
               onPressed: _isUpdatingFirebase ? null : _updateAllData,
               icon: _isUpdatingFirebase
@@ -267,24 +267,24 @@ class _ListingTabState extends State<ListingTab> {
       color: Theme.of(context).primaryColor,
       backgroundColor: Colors.white,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         physics: const BouncingScrollPhysics(),
         children: [
           _buildCategorySection(
               'Draft Issues', 'draft_issues', Icons.edit_note),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildCategorySection(
               'Upcoming Open', 'upcoming_open', Icons.schedule),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildCategorySection(
               'Listing Soon', 'listing_soon', Icons.trending_up),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildCategorySection(
               'Recently Listed', 'recently_listed', Icons.check_circle),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _buildCategorySection(
               'Gain/Loss Analysis', 'gain_loss_analysis', Icons.analytics),
-          const SizedBox(height: 32), // Extra bottom padding
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -302,8 +302,8 @@ class _ListingTabState extends State<ListingTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          margin: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-          padding: const EdgeInsets.all(10.0),
+          margin: const EdgeInsets.only(top: 4.0, bottom: 6.0),
+          padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
@@ -379,7 +379,7 @@ class _ListingTabState extends State<ListingTab> {
           ),
         ),
         _buildDataTable(ipos),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
       ],
     );
   }
@@ -387,7 +387,7 @@ class _ListingTabState extends State<ListingTab> {
   Widget _buildDataTable(List<IpoModel> ipos) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 8.0),
+      margin: const EdgeInsets.only(top: 4.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -407,15 +407,15 @@ class _ListingTabState extends State<ListingTab> {
         scrollDirection: Axis.horizontal,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minWidth:
-                MediaQuery.of(context).size.width - 40, // Account for padding
+            minWidth: MediaQuery.of(context).size.width -
+                32,
           ),
           child: DataTable(
-            columnSpacing: 20,
-            horizontalMargin: 16,
-            headingRowHeight: 50,
-            dataRowMinHeight: 48,
-            dataRowMaxHeight: 48,
+            columnSpacing: 16,
+            horizontalMargin: 12,
+            headingRowHeight: 40,
+            dataRowMinHeight: 36,
+            dataRowMaxHeight: 36,
             headingTextStyle: TextStyle(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).primaryColor,
