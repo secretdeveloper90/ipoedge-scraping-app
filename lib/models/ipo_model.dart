@@ -228,6 +228,11 @@ class IpoModel {
     );
   }
 
+  // Get category from additionalData
+  String? get category {
+    return additionalData?['category']?.toString();
+  }
+
   // Get category-specific display name
   String get displayName {
     return companyName ??

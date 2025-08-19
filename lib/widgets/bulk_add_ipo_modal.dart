@@ -38,6 +38,51 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     super.dispose();
   }
 
+  // Method to add IPOs with their appropriate categories
+  Future<void> _addIposWithCategories(
+      List<IpoModel> ipos, List<String> allIpoIds) async {
+    // Create a map to track categories for each IPO ID
+    final Map<String, String> ipoCategories = {};
+
+    // Get categories from selected dropdown options
+    for (final option in _selectedIpoOptions) {
+      if (option.category != null) {
+        ipoCategories[option.companyId] = option.category!;
+      }
+    }
+
+    // For manual IDs, look up their categories from ipo_analysis collection
+    final manualIds =
+        _manualIpoIds.where((id) => !ipoCategories.containsKey(id)).toList();
+    if (manualIds.isNotEmpty) {
+      try {
+        final analysisIpos = await FirebaseService.getAllIposFromAnalysis();
+        for (final analysisIpo in analysisIpos) {
+          final category = analysisIpo.category;
+          if (category != null && manualIds.contains(analysisIpo.companyId)) {
+            ipoCategories[analysisIpo.companyId] = category;
+          }
+        }
+      } catch (e) {
+        // If we can't get categories from analysis, continue without them
+        debugPrint(
+            'Warning: Could not fetch categories from analysis collection: $e');
+      }
+    }
+
+    // Add each IPO with its category
+    for (final ipo in ipos) {
+      final category = ipoCategories[ipo.companyId];
+      try {
+        await FirebaseService.addIpo(ipo, category: category);
+      } catch (e) {
+        // Log error but continue with other IPOs
+        debugPrint('Error adding IPO ${ipo.companyId}: $e');
+        rethrow;
+      }
+    }
+  }
+
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -178,10 +223,11 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
       // debugPrint(
       //     'DEBUG: Failed IPO IDs: ${failedIds.map((f) => f['id']).toList()}');
 
-      // Add successful IPOs to Firebase with error handling
+      // Add successful IPOs to Firebase with their categories
       if (iposToAdd.isNotEmpty) {
         try {
-          await FirebaseService.addMultipleIpos(iposToAdd);
+          // Group IPOs by their categories and add them
+          await _addIposWithCategories(iposToAdd, allIpoIds);
         } catch (e) {
           _showSnackBar('Error saving IPOs to Firebase: $e', isError: true);
           setState(() {

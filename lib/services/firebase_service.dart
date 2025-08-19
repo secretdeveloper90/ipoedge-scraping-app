@@ -35,15 +35,21 @@ class FirebaseService {
   }
 
   // Add a new IPO to Firebase
-  static Future<String> addIpo(IpoModel ipo) async {
+  static Future<String> addIpo(IpoModel ipo, {String? category}) async {
     final db = firestore;
     if (db == null) {
       throw Exception('Firebase not available');
     }
 
     try {
-      final docRef =
-          await db.collection(iposCollectionName).add(ipo.toFirestore());
+      final firestoreData = ipo.toFirestore();
+
+      // Add category if provided
+      if (category != null) {
+        firestoreData['category'] = category;
+      }
+
+      final docRef = await db.collection(iposCollectionName).add(firestoreData);
 
       return docRef.id;
     } catch (e) {
@@ -250,7 +256,8 @@ class FirebaseService {
   }
 
   // Batch operations for multiple IPOs
-  static Future<void> addMultipleIpos(List<IpoModel> ipos) async {
+  static Future<void> addMultipleIpos(List<IpoModel> ipos,
+      {String? category}) async {
     final db = firestore;
     if (db == null) {
       throw Exception('Firebase not available');
@@ -261,7 +268,14 @@ class FirebaseService {
 
       for (final ipo in ipos) {
         final docRef = db.collection(iposCollectionName).doc();
-        batch.set(docRef, ipo.toFirestore());
+        final firestoreData = ipo.toFirestore();
+
+        // Add category if provided
+        if (category != null) {
+          firestoreData['category'] = category;
+        }
+
+        batch.set(docRef, firestoreData);
       }
 
       await batch.commit();
