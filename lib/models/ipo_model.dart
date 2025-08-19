@@ -5,6 +5,12 @@ class IpoModel {
   final Map<String, dynamic>? additionalData;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  // Document links
+  final String? drhpLink;
+  final String? rhpLink;
+  final String? anchorLink;
+  // Expected premium
+  final String? expectedPremium;
 
   IpoModel({
     this.id,
@@ -13,6 +19,10 @@ class IpoModel {
     this.additionalData,
     this.createdAt,
     this.updatedAt,
+    this.drhpLink,
+    this.rhpLink,
+    this.anchorLink,
+    this.expectedPremium,
   });
 
   factory IpoModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +51,13 @@ class IpoModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'])
           : null,
+      drhpLink: json['drhpLink']?.toString() ??
+          json['document_links']?['drhp']?.toString(),
+      rhpLink: json['rhpLink']?.toString() ??
+          json['document_links']?['rhp']?.toString(),
+      anchorLink: json['anchorLink']?.toString() ??
+          json['document_links']?['anchor']?.toString(),
+      expectedPremium: json['expectedPremium']?.toString(),
     );
   }
 
@@ -52,6 +69,10 @@ class IpoModel {
       'additionalData': additionalData,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'drhpLink': drhpLink,
+      'rhpLink': rhpLink,
+      'anchorLink': anchorLink,
+      'expectedPremium': expectedPremium,
     };
   }
 
@@ -81,6 +102,27 @@ class IpoModel {
     firestoreData['companyId'] = companyId;
     if (companyName != null) {
       firestoreData['companyName'] = companyName;
+    }
+
+    // Add document links as nested object
+    final documentLinksData = <String, String?>{};
+    if (drhpLink != null && drhpLink!.isNotEmpty) {
+      documentLinksData['drhp'] = drhpLink;
+    }
+    if (rhpLink != null && rhpLink!.isNotEmpty) {
+      documentLinksData['rhp'] = rhpLink;
+    }
+    if (anchorLink != null && anchorLink!.isNotEmpty) {
+      documentLinksData['anchor'] = anchorLink;
+    }
+
+    if (documentLinksData.isNotEmpty) {
+      firestoreData['document_links'] = documentLinksData;
+    }
+
+    // Add expected premium at root level
+    if (expectedPremium != null && expectedPremium!.isNotEmpty) {
+      firestoreData['expectedPremium'] = expectedPremium;
     }
 
     return firestoreData;
@@ -217,6 +259,10 @@ class IpoModel {
     Map<String, dynamic>? additionalData,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? drhpLink,
+    String? rhpLink,
+    String? anchorLink,
+    String? expectedPremium,
   }) {
     return IpoModel(
       id: id ?? this.id,
@@ -225,6 +271,10 @@ class IpoModel {
       additionalData: additionalData ?? this.additionalData,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      drhpLink: drhpLink ?? this.drhpLink,
+      rhpLink: rhpLink ?? this.rhpLink,
+      anchorLink: anchorLink ?? this.anchorLink,
+      expectedPremium: expectedPremium ?? this.expectedPremium,
     );
   }
 
@@ -238,4 +288,23 @@ class IpoModel {
     return companyName ??
         (companyId.isNotEmpty ? companyId : 'Unknown Company');
   }
+
+  // Document links validation methods
+  bool get hasAnyDocumentLink =>
+      (drhpLink?.isNotEmpty ?? false) ||
+      (rhpLink?.isNotEmpty ?? false) ||
+      (anchorLink?.isNotEmpty ?? false);
+
+  bool isValidUrl(String? url) {
+    if (url == null || url.isEmpty) return true; // Empty is valid
+    try {
+      final uri = Uri.parse(url);
+      return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  bool get hasValidDocumentLinks =>
+      isValidUrl(drhpLink) && isValidUrl(rhpLink) && isValidUrl(anchorLink);
 }

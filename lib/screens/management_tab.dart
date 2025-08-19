@@ -3,6 +3,7 @@ import '../models/ipo_model.dart';
 import '../services/api_service.dart';
 import '../services/firebase_service.dart';
 import '../widgets/bulk_add_ipo_modal.dart';
+import '../widgets/document_links_modal.dart';
 
 class ManagementTab extends StatefulWidget {
   const ManagementTab({super.key});
@@ -98,6 +99,20 @@ class _ManagementTabState extends State<ManagementTab> {
     } catch (e) {
       _showSnackBar('Error deleting IPO: $e', isError: true);
     }
+  }
+
+  Future<void> _manageDocumentLinks(IpoModel ipo) async {
+    showDialog(
+      context: context,
+      builder: (context) => DocumentLinksModal(
+        ipo: ipo,
+        onSaved: () {
+          Navigator.of(context).pop();
+          _showSnackBar('Document links updated successfully');
+          _loadSavedIpos(); // Reload to get updated data
+        },
+      ),
+    );
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -362,8 +377,7 @@ class _ManagementTabState extends State<ManagementTab> {
   }
 
   Widget _buildManagementDataTable() {
-    return SingleChildScrollView(
-        child: Container(
+    return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 8.0),
       decoration: BoxDecoration(
@@ -383,63 +397,59 @@ class _ManagementTabState extends State<ManagementTab> {
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth:
-                MediaQuery.of(context).size.width - 32, // Account for padding
+        child: DataTable(
+          columnSpacing: 8,
+          horizontalMargin: 12,
+          headingRowHeight: 56,
+          dataRowMinHeight: 72,
+          dataRowMaxHeight: 72,
+          headingTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).primaryColor,
+            fontSize: 14,
           ),
-          child: DataTable(
-            columnSpacing: 12,
-            horizontalMargin: 16,
-            headingRowHeight: 56,
-            dataRowMinHeight: 72,
-            dataRowMaxHeight: 72,
-            headingTextStyle: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-              fontSize: 16,
+          columns: const [
+            DataColumn(
+              label: SizedBox(
+                width: 80,
+                child: Text('IPO ID'),
+              ),
             ),
-            columns: [
-              DataColumn(
-                label: Container(
-                  width: 50,
-                  child: const Text('IPO ID'),
-                ),
+            DataColumn(
+              label: SizedBox(
+                width: 150,
+                child: Text('Company Name'),
               ),
-              DataColumn(
-                label: Container(
-                  width: 120,
-                  child: const Text('Company Name'),
-                ),
+            ),
+            DataColumn(
+              label: SizedBox(
+                width: 120,
+                child: Text('Actions'),
               ),
-              DataColumn(
-                label: Container(
-                  width: 90,
-                  child: const Text('Actions'),
-                ),
-              ),
-            ],
-            rows: _savedIpos.map((ipo) {
-              return DataRow(
-                cells: [
-                  DataCell(
-                    Container(
-                      width: 50,
-                      child: Text(
-                        ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
+            ),
+          ],
+          rows: _savedIpos.map((ipo) {
+            return DataRow(
+              cells: [
+                DataCell(
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
                   ),
-                  DataCell(
-                    Container(
-                      width: 120,
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 150,
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
                         ipo.companyName?.isNotEmpty == true
@@ -448,7 +458,7 @@ class _ManagementTabState extends State<ManagementTab> {
                                 ? ipo.companyId
                                 : 'Unknown Company',
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                           height: 1.3,
                         ),
@@ -457,47 +467,58 @@ class _ManagementTabState extends State<ManagementTab> {
                       ),
                     ),
                   ),
-                  DataCell(
-                    Container(
-                      width: 100,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
+                ),
+                DataCell(
+                  SizedBox(
+                    width: 100,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: IconButton(
+                            icon: const Icon(Icons.link),
+                            color: Colors.blue,
+                            onPressed: () => _manageDocumentLinks(ipo),
+                            tooltip: 'Document Links',
+                            iconSize: 16,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: IconButton(
                             icon: const Icon(Icons.refresh),
                             color: Colors.orange,
                             onPressed: () => _updateIpo(ipo),
                             tooltip: 'Update',
-                            iconSize: 18,
-                            padding: const EdgeInsets.all(4),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
+                            iconSize: 16,
+                            padding: EdgeInsets.zero,
                           ),
-                          const SizedBox(width: 2),
-                          IconButton(
+                        ),
+                        SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: IconButton(
                             icon: const Icon(Icons.delete),
                             color: Colors.red,
                             onPressed: () => _deleteIpo(ipo),
                             tooltip: 'Delete',
-                            iconSize: 18,
-                            padding: const EdgeInsets.all(4),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
+                            iconSize: 16,
+                            padding: EdgeInsets.zero,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              );
-            }).toList(),
-          ),
+                ),
+              ],
+            );
+          }).toList(),
         ),
       ),
-    ));
+    );
   }
 }

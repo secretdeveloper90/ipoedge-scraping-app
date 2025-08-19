@@ -156,6 +156,68 @@ class FirebaseService {
     }
   }
 
+  // Update only document links for an IPO
+  static Future<void> updateIpoDocumentLinks(
+    String id, {
+    String? drhpLink,
+    String? rhpLink,
+    String? anchorLink,
+    String? expectedPremium,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final updateData = <String, dynamic>{
+        '_firebaseUpdatedAt': DateTime.now(),
+      };
+
+      // Create nested document_links object
+      final documentLinksData = <String, String?>{};
+
+      if (drhpLink != null) {
+        if (drhpLink.isNotEmpty) {
+          documentLinksData['drhp'] = drhpLink;
+        }
+      }
+
+      if (rhpLink != null) {
+        if (rhpLink.isNotEmpty) {
+          documentLinksData['rhp'] = rhpLink;
+        }
+      }
+
+      if (anchorLink != null) {
+        if (anchorLink.isNotEmpty) {
+          documentLinksData['anchor'] = anchorLink;
+        }
+      }
+
+      // If we have any document links, update the nested object
+      if (documentLinksData.isNotEmpty) {
+        updateData['document_links'] = documentLinksData;
+      } else {
+        // If all links are empty, remove the document_links field
+        updateData['document_links'] = FieldValue.delete();
+      }
+
+      // Handle expected premium at root level
+      if (expectedPremium != null) {
+        if (expectedPremium.isNotEmpty) {
+          updateData['expectedPremium'] = expectedPremium;
+        } else {
+          updateData['expectedPremium'] = FieldValue.delete();
+        }
+      }
+
+      await db.collection(iposCollectionName).doc(id).update(updateData);
+    } catch (e) {
+      throw Exception('Error updating IPO document links: $e');
+    }
+  }
+
   // Delete an IPO
   static Future<void> deleteIpo(String id) async {
     final db = firestore;
