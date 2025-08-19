@@ -73,14 +73,21 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          _buildYearSelector(),
-          const Divider(),
-          Expanded(
-            child: _buildContent(),
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () => _selectedYear != null
+            ? _loadIposByYear(_selectedYear!)
+            : Future.value(),
+        color: Theme.of(context).primaryColor,
+        backgroundColor: Colors.white,
+        child: Column(
+          children: [
+            _buildYearSelector(),
+            const Divider(),
+            Expanded(
+              child: _buildContent(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -91,13 +98,6 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'IPO Screener',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               Text(
@@ -126,14 +126,6 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
                         onChanged: _onYearChanged,
                       ),
               ),
-              const SizedBox(width: 16),
-              IconButton(
-                onPressed: _selectedYear != null
-                    ? () => _loadIposByYear(_selectedYear!)
-                    : null,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-              ),
             ],
           ),
         ],
@@ -149,36 +141,42 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red[300],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading IPOs',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _selectedYear != null
+                      ? () => _loadIposByYear(_selectedYear!)
+                      : null,
+                  child: const Text('Retry'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading IPOs',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _selectedYear != null
-                  ? () => _loadIposByYear(_selectedYear!)
-                  : null,
-              child: const Text('Retry'),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -237,36 +235,43 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
         const SizedBox(height: 8),
         Expanded(
           child: _ipos.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.inbox_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
+              ? SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Container(
+                    height: MediaQuery.of(context).size.height * 0.5,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No IPOs found',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No IPOs available for the selected year',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No IPOs found',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No IPOs available for the selected year',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                      ),
-                    ],
+                    ),
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: () => _loadIposByYear(_selectedYear!),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: _buildDataTable(),
-                  ),
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildDataTable(),
                 ),
         ),
       ],

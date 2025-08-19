@@ -142,12 +142,17 @@ class _ManagementTabState extends State<ManagementTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          _buildAddSection(),
-          const Divider(),
-          _buildSavedIposSection(),
-        ],
+      body: RefreshIndicator(
+        onRefresh: _loadSavedIpos,
+        color: Theme.of(context).primaryColor,
+        backgroundColor: Colors.white,
+        child: Column(
+          children: [
+            _buildAddSection(),
+            const Divider(),
+            Expanded(child: _buildSavedIposSection()),
+          ],
+        ),
       ),
     );
   }
@@ -187,22 +192,12 @@ class _ManagementTabState extends State<ManagementTab> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Saved IPOs (${_savedIpos.length})',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                ),
-                IconButton(
-                  onPressed: _loadSavedIpos,
-                  icon: const Icon(Icons.refresh, size: 24),
-                  tooltip: 'Refresh',
-                ),
-              ],
+            child: Text(
+              'Saved IPOs (${_savedIpos.length})',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
             ),
           ),
           Expanded(
@@ -221,66 +216,79 @@ class _ManagementTabState extends State<ManagementTab> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red[300],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading saved IPOs',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadSavedIpos,
+                  child: const Text('Retry'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading saved IPOs',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadSavedIpos,
-              child: const Text('Retry'),
-            ),
-          ],
+          ),
         ),
       );
     }
 
     if (_savedIpos.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 64,
-              color: Colors.grey[400],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inbox_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No saved IPOs',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add IPOs using the form above',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No saved IPOs',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add IPOs using the form above',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-          ],
+          ),
         ),
       );
     }
 
-    return Padding(
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: _buildManagementDataTable(),
     );
