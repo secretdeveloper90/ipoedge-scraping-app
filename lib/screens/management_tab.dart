@@ -81,6 +81,106 @@ class _ManagementTabState extends State<ManagementTab> {
     }
   }
 
+  Future<void> _bulkUpdateAllIpos() async {
+    if (_savedIpos.isEmpty) {
+      _showSnackBar('No IPOs to update', isError: true);
+      return;
+    }
+
+    final confirmed = await _showConfirmDialog(
+      'Bulk Update All IPOs',
+      'Are you sure you want to update all ${_savedIpos.length} IPOs? This will fetch the latest data from the API for each IPO.',
+    );
+
+    if (!confirmed) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      int successCount = 0;
+      int failureCount = 0;
+      final List<String> failedCompanies = [];
+
+      // Process IPOs in batches to avoid overwhelming the API
+      const batchSize = 5;
+      for (int i = 0; i < _savedIpos.length; i += batchSize) {
+        final batch = _savedIpos.skip(i).take(batchSize).toList();
+
+        // Process batch concurrently but with limited concurrency
+        final futures = batch.map((ipo) async {
+          if (ipo.id == null) {
+            return {
+              'success': false,
+              'company': ipo.companyName ?? ipo.companyId
+            };
+          }
+
+          try {
+            // Fetch updated data from API
+            final updatedIpo =
+                await ApiService.getIpoByCompanyId(ipo.companyId);
+
+            // Update in Firebase
+            await FirebaseService.updateIpo(ipo.id!, updatedIpo);
+
+            return {
+              'success': true,
+              'company': ipo.companyName ?? ipo.companyId
+            };
+          } catch (e) {
+            return {
+              'success': false,
+              'company': ipo.companyName ?? ipo.companyId,
+              'error': e.toString()
+            };
+          }
+        });
+
+        final results = await Future.wait(futures);
+
+        for (final result in results) {
+          if (result['success'] == true) {
+            successCount++;
+          } else {
+            failureCount++;
+            failedCompanies.add(result['company'] as String);
+          }
+        }
+
+        // Small delay between batches to be respectful to the API
+        if (i + batchSize < _savedIpos.length) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
+
+      // Show results
+      if (failureCount == 0) {
+        _showSnackBar('Successfully updated all $successCount IPOs');
+      } else {
+        _showSnackBar(
+          'Updated $successCount IPOs successfully. $failureCount failed.',
+          isError: failureCount > successCount,
+        );
+
+        // Show detailed failure information if there are failures
+        if (failedCompanies.isNotEmpty) {
+          _showBulkUpdateResultsDialog(
+              successCount, failureCount, failedCompanies);
+        }
+      }
+
+      _loadSavedIpos();
+    } catch (e) {
+      _showSnackBar('Error during bulk update: $e', isError: true);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _deleteIpo(IpoModel ipo) async {
     if (ipo.id == null) return;
 
@@ -136,12 +236,68 @@ class _ManagementTabState extends State<ManagementTab> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: title.contains('Delete')
+                ? const Text('Delete')
+                : const Text('Update'),
           ),
         ],
       ),
     );
     return result ?? false;
+  }
+
+  Future<void> _showBulkUpdateResultsDialog(
+    int successCount,
+    int failureCount,
+    List<String> failedCompanies,
+  ) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bulk Update Results'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('✅ Successfully updated: $successCount IPOs'),
+              const SizedBox(height: 8),
+              Text('❌ Failed to update: $failureCount IPOs'),
+              if (failedCompanies.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Failed companies:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 150,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: failedCompanies
+                          .map((company) => Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 2),
+                                child: Text('• $company'),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openBulkAddModal() {
@@ -173,28 +329,73 @@ class _ManagementTabState extends State<ManagementTab> {
 
   Widget _buildAddSection() {
     return Container(
-      width: double.infinity,
       margin: const EdgeInsets.all(8),
-      child: ElevatedButton.icon(
-        onPressed: _openBulkAddModal,
-        icon: const Icon(Icons.add_circle, size: 20),
-        label: const Text(
-          'Add IPOs',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: ElevatedButton.icon(
+              onPressed: _openBulkAddModal,
+              icon: const Icon(Icons.add_circle, size: 20),
+              label: const Text(
+                'Add IPOs',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+                shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
+              ),
+            ),
           ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton.icon(
+              onPressed:
+                  _savedIpos.isEmpty || _isLoading ? null : _bulkUpdateAllIpos,
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.update, size: 20),
+              label: Text(
+                _isLoading ? 'Updating...' : 'Update All',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _savedIpos.isEmpty || _isLoading
+                    ? Colors.grey
+                    : Colors.orange,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+                shadowColor: Colors.orange.withOpacity(0.3),
+              ),
+            ),
           ),
-          elevation: 3,
-          shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
-        ),
+        ],
       ),
     );
   }

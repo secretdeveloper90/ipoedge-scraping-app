@@ -285,8 +285,9 @@ class IpoModel {
 
   // Get category-specific display name
   String get displayName {
-    return companyName ??
-        (companyId.isNotEmpty ? companyId : 'Unknown Company');
+    return (companyName?.isNotEmpty == true)
+        ? companyName!
+        : (companyId.isNotEmpty ? companyId : 'Unknown Company');
   }
 
   // Document links validation methods

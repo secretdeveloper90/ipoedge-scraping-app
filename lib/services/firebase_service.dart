@@ -561,6 +561,51 @@ class FirebaseService {
       throw Exception('Error adding or updating IPO: $e');
     }
   }
+
+  // Bulk update multiple IPOs using batch operations
+  static Future<Map<String, dynamic>> bulkUpdateIpos(
+    List<Map<String, dynamic>> ipoUpdates,
+  ) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final batch = db.batch();
+      int successCount = 0;
+      int failureCount = 0;
+      final List<String> failedCompanies = [];
+
+      for (final update in ipoUpdates) {
+        try {
+          final String docId = update['docId'] as String;
+          final IpoModel ipo = update['ipo'] as IpoModel;
+
+          final docRef = db.collection(iposCollectionName).doc(docId);
+          batch.update(docRef, ipo.toFirestore());
+          successCount++;
+        } catch (e) {
+          failureCount++;
+          final companyName = (update['ipo'] as IpoModel).companyName ??
+              (update['ipo'] as IpoModel).companyId;
+          failedCompanies.add(companyName);
+        }
+      }
+
+      if (successCount > 0) {
+        await batch.commit();
+      }
+
+      return {
+        'successCount': successCount,
+        'failureCount': failureCount,
+        'failedCompanies': failedCompanies,
+      };
+    } catch (e) {
+      throw Exception('Error during bulk update: $e');
+    }
+  }
 }
 
 // Data class for IPO dropdown options
