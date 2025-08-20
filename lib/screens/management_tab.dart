@@ -49,7 +49,6 @@ class _ManagementTabState extends State<ManagementTab> {
         _isLoadingSavedIpos = false;
       });
     } catch (e) {
-      print('Error loading saved IPOs: $e');
       setState(() {
         _error = e.toString();
         _isLoadingSavedIpos = false;

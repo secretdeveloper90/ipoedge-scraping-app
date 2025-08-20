@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import '../models/ipo_model.dart';
 import 'api_service.dart';
 
@@ -13,11 +12,9 @@ class FirebaseService {
     try {
       if (_firestore == null) {
         _firestore = FirebaseFirestore.instance;
-        debugPrint('Firebase Firestore instance created successfully');
       }
       return _firestore;
     } catch (e) {
-      debugPrint('Firebase Firestore not available: $e');
       return null;
     }
   }
@@ -29,7 +26,6 @@ class FirebaseService {
     try {
       return Firebase.apps.isNotEmpty;
     } catch (e) {
-      debugPrint('Error checking Firebase initialization: $e');
       return false;
     }
   }
@@ -397,9 +393,6 @@ class FirebaseService {
       final seenIds = <String>{};
       final options = <IpoOption>[];
 
-      debugPrint(
-          'DEBUG: Total documents in Firebase: ${querySnapshot.docs.length}');
-
       for (final doc in querySnapshot.docs) {
         final data = doc.data();
 
@@ -436,9 +429,6 @@ class FirebaseService {
 
         final category = data['category']?.toString() ?? 'unknown';
 
-        debugPrint(
-            'DEBUG: Processing IPO - ID: $apiId, Name: $companyName, Category: $category, Seen: ${seenIds.contains(apiId)}');
-
         if (apiId != null && apiId.isNotEmpty && !seenIds.contains(apiId)) {
           seenIds.add(apiId);
           options.add(IpoOption(
@@ -446,17 +436,8 @@ class FirebaseService {
             companyName: companyName,
             category: category,
           ));
-          debugPrint(
-              'DEBUG: Added IPO option - ID: $apiId, Name: $companyName');
-        } else if (apiId != null && seenIds.contains(apiId)) {
-          debugPrint(
-              'DEBUG: Skipped duplicate IPO - ID: $apiId, Name: $companyName, Category: $category');
         }
       }
-
-      debugPrint('DEBUG: Final unique IPO options count: ${options.length}');
-      debugPrint(
-          'DEBUG: Unique IPO IDs: ${options.map((o) => o.companyId).toList()}');
 
       return options;
     } catch (e) {

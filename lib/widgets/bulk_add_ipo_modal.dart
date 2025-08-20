@@ -65,8 +65,6 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
         }
       } catch (e) {
         // If we can't get categories from analysis, continue without them
-        debugPrint(
-            'Warning: Could not fetch categories from analysis collection: $e');
       }
     }
 
@@ -76,8 +74,7 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
       try {
         await FirebaseService.addIpo(ipo, category: category);
       } catch (e) {
-        // Log error but continue with other IPOs
-        debugPrint('Error adding IPO ${ipo.companyId}: $e');
+        // Error adding IPO, continue with other IPOs
         rethrow;
       }
     }
@@ -151,9 +148,6 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
       final newIpoIds =
           uniqueIpoIds.where((id) => !existingIds.contains(id)).toList();
 
-      // debugPrint('DEBUG: Starting to process ${newIpoIds.length} new IPO IDs');
-      // debugPrint('DEBUG: New IPO IDs: $newIpoIds');
-
       if (newIpoIds.isEmpty) {
         _showSnackBar(
             'All selected IPOs already exist in the management system',
@@ -177,7 +171,6 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
 
       for (int i = 0; i < newIpoIds.length; i += batchSize) {
         final batch = newIpoIds.skip(i).take(batchSize).toList();
-        // debugPrint('DEBUG: Processing batch ${(i ~/ batchSize) + 1}: $batch');
 
         // Process batch concurrently but with limited concurrency
         final futures = batch.map((id) async {
@@ -185,13 +178,10 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
             _currentBulkIndex = i + batch.indexOf(id) + 1;
           });
 
-          // debugPrint('DEBUG: Fetching IPO data for ID: $id');
           try {
             final ipo = await ApiService.getIpoByCompanyId(id);
-            // debugPrint('DEBUG: Successfully fetched IPO for ID: $id');
             return {'success': true, 'ipo': ipo, 'id': id};
           } catch (e) {
-            // debugPrint('DEBUG: Failed to fetch IPO for ID: $id, Error: $e');
             return {'success': false, 'error': e.toString(), 'id': id};
           }
         });
@@ -201,14 +191,11 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
         for (final result in results) {
           if (result['success'] == true) {
             iposToAdd.add(result['ipo'] as IpoModel);
-            // debugPrint('DEBUG: Added IPO to success list: ${result['id']}');
           } else {
             failedIds.add({
               'id': result['id'] as String,
               'error': result['error'] as String,
             });
-            // debugPrint(
-            //     'DEBUG: Added IPO to failed list: ${result['id']} - ${result['error']}');
           }
         }
 
@@ -217,11 +204,6 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
           await Future.delayed(const Duration(milliseconds: 500));
         }
       }
-
-      // debugPrint(
-      //     'DEBUG: Final results - Success: ${iposToAdd.length}, Failed: ${failedIds.length}');
-      // debugPrint(
-      //     'DEBUG: Failed IPO IDs: ${failedIds.map((f) => f['id']).toList()}');
 
       // Add successful IPOs to Firebase with their categories
       if (iposToAdd.isNotEmpty) {

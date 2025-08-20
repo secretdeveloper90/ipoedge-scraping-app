@@ -11,12 +11,11 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugPrint('Firebase initialized successfully');
   } catch (e) {
     if (e.toString().contains('duplicate-app')) {
-      debugPrint('Firebase already initialized, continuing...');
+      // Firebase already initialized, continuing...
     } else {
-      debugPrint('Firebase initialization error: $e');
+      // Firebase initialization error, continue without Firebase for demo purposes
     }
     // Continue without Firebase for demo purposes
   }
