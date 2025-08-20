@@ -479,6 +479,88 @@ class FirebaseService {
       throw Exception('Error checking existing IPO IDs: $e');
     }
   }
+
+  // Get existing IPOs with their document IDs for updating
+  static Future<Map<String, String>> getExistingIpoIdsWithDocIds(
+      List<String> companyIds) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final existingIpos = <String, String>{}; // companyId -> documentId
+
+      // Check in batches to avoid Firestore query limitations
+      const batchSize = 10;
+      for (int i = 0; i < companyIds.length; i += batchSize) {
+        final batch = companyIds.skip(i).take(batchSize).toList();
+
+        final querySnapshot = await db
+            .collection(iposCollectionName)
+            .where('companyId', whereIn: batch)
+            .get();
+
+        for (final doc in querySnapshot.docs) {
+          final data = doc.data();
+          final companyId = data['companyId']?.toString();
+          if (companyId != null) {
+            existingIpos[companyId] = doc.id;
+          }
+        }
+      }
+
+      return existingIpos;
+    } catch (e) {
+      throw Exception('Error checking existing IPO IDs with doc IDs: $e');
+    }
+  }
+
+  // Update IPO with category
+  static Future<void> updateIpoWithCategory(String id, IpoModel ipo,
+      {String? category}) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final firestoreData = ipo.toFirestore();
+
+      // Add category if provided
+      if (category != null) {
+        firestoreData['category'] = category;
+      }
+
+      await db.collection(iposCollectionName).doc(id).update(firestoreData);
+    } catch (e) {
+      throw Exception('Error updating IPO with category: $e');
+    }
+  }
+
+  // Add or update IPO with category (upsert operation)
+  static Future<String> addOrUpdateIpo(IpoModel ipo, {String? category}) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Check if IPO already exists
+      final existingIpo = await getIpoByCompanyId(ipo.companyId);
+
+      if (existingIpo != null && existingIpo.id != null) {
+        // Update existing IPO with new data and category
+        await updateIpoWithCategory(existingIpo.id!, ipo, category: category);
+        return existingIpo.id!;
+      } else {
+        // Add new IPO
+        return await addIpo(ipo, category: category);
+      }
+    } catch (e) {
+      throw Exception('Error adding or updating IPO: $e');
+    }
+  }
 }
 
 // Data class for IPO dropdown options

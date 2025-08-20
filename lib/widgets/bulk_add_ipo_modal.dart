@@ -38,8 +38,8 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     super.dispose();
   }
 
-  // Method to add IPOs with their appropriate categories
-  Future<void> _addIposWithCategories(
+  // Method to add or update IPOs with their appropriate categories
+  Future<void> _addOrUpdateIposWithCategories(
       List<IpoModel> ipos, List<String> allIpoIds) async {
     // Create a map to track categories for each IPO ID
     final Map<String, String> ipoCategories = {};
@@ -68,13 +68,13 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
       }
     }
 
-    // Add each IPO with its category
+    // Add or update each IPO with its category
     for (final ipo in ipos) {
       final category = ipoCategories[ipo.companyId];
       try {
-        await FirebaseService.addIpo(ipo, category: category);
+        await FirebaseService.addOrUpdateIpo(ipo, category: category);
       } catch (e) {
-        // Error adding IPO, continue with other IPOs
+        // Error adding/updating IPO, continue with other IPOs
         rethrow;
       }
     }
@@ -145,32 +145,21 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
         return;
       }
 
-      final newIpoIds =
-          uniqueIpoIds.where((id) => !existingIds.contains(id)).toList();
-
-      if (newIpoIds.isEmpty) {
-        _showSnackBar(
-            'All selected IPOs already exist in the management system',
-            isError: true);
-        setState(() {
-          _isBulkLoading = false;
-        });
-        if (mounted) Navigator.of(context).pop();
-        return;
-      }
+      // Process all IPOs (both new and existing) for add/update
+      final allIpoIds = uniqueIpoIds;
 
       if (existingIds.isNotEmpty) {
         _showSnackBar(
-            '${existingIds.length} IPO(s) already exist and will be skipped');
+            '${existingIds.length} IPO(s) already exist and will be updated with latest data');
       }
 
-      // Fetch and add IPOs with enhanced error tracking
-      final iposToAdd = <IpoModel>[];
+      // Fetch and process IPOs with enhanced error tracking
+      final iposToProcess = <IpoModel>[];
       final failedIds = <Map<String, String>>[];
       const batchSize = 5;
 
-      for (int i = 0; i < newIpoIds.length; i += batchSize) {
-        final batch = newIpoIds.skip(i).take(batchSize).toList();
+      for (int i = 0; i < allIpoIds.length; i += batchSize) {
+        final batch = allIpoIds.skip(i).take(batchSize).toList();
 
         // Process batch concurrently but with limited concurrency
         final futures = batch.map((id) async {
@@ -190,7 +179,7 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
 
         for (final result in results) {
           if (result['success'] == true) {
-            iposToAdd.add(result['ipo'] as IpoModel);
+            iposToProcess.add(result['ipo'] as IpoModel);
           } else {
             failedIds.add({
               'id': result['id'] as String,
@@ -200,16 +189,16 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
         }
 
         // Small delay between batches to be respectful to the API
-        if (i + batchSize < newIpoIds.length) {
+        if (i + batchSize < allIpoIds.length) {
           await Future.delayed(const Duration(milliseconds: 500));
         }
       }
 
-      // Add successful IPOs to Firebase with their categories
-      if (iposToAdd.isNotEmpty) {
+      // Add or update successful IPOs to Firebase with their categories
+      if (iposToProcess.isNotEmpty) {
         try {
-          // Group IPOs by their categories and add them
-          await _addIposWithCategories(iposToAdd, allIpoIds);
+          // Group IPOs by their categories and add/update them
+          await _addOrUpdateIposWithCategories(iposToProcess, allIpoIds);
         } catch (e) {
           _showSnackBar('Error saving IPOs to Firebase: $e', isError: true);
           setState(() {
@@ -222,8 +211,8 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
 
       // Show detailed results
       await _showBulkResultsDialog(
-        successCount: iposToAdd.length,
-        skippedCount: existingIds.length,
+        successCount: iposToProcess.length,
+        skippedCount: 0, // No longer skipping, we update existing ones
         failedIds: failedIds,
       );
 
@@ -258,10 +247,10 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Bulk Add'),
+        title: const Text('Confirm Bulk Add/Update'),
         content: Text(
-          'You are about to add $count IPOs. This may take several minutes to complete. '
-          'Do you want to continue?',
+          'You are about to add/update $count IPOs. Existing IPOs will be updated with latest data and categories. '
+          'This may take several minutes to complete. Do you want to continue?',
         ),
         actions: [
           TextButton(
@@ -284,12 +273,12 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     required List<Map<String, String>> failedIds,
   }) async {
     final failedCount = failedIds.length;
-    final totalProcessed = successCount + skippedCount + failedCount;
+    final totalProcessed = successCount + failedCount;
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Bulk Add Results'),
+        title: const Text('Bulk Add/Update Results'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -308,19 +297,7 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
                     const Icon(Icons.check_circle,
                         color: Colors.green, size: 20),
                     const SizedBox(width: 8),
-                    Text('$successCount successfully added'),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              // Skipped
-              if (skippedCount > 0) ...[
-                Row(
-                  children: [
-                    const Icon(Icons.info, color: Colors.orange, size: 20),
-                    const SizedBox(width: 8),
-                    Text('$skippedCount skipped (already exist)'),
+                    Text('$successCount successfully added/updated'),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -484,7 +461,7 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Processing IPOs...',
+                                'Adding/Updating IPOs...',
                                 style: TextStyle(
                                   color: Theme.of(context).primaryColor,
                                   fontWeight: FontWeight.w600,
