@@ -103,7 +103,7 @@ class MyApp extends StatelessWidget {
       ),
 
       // Enhanced Card Theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shadowColor: colorScheme.shadow.withOpacity(0.15),
         surfaceTintColor: colorScheme.surfaceTint,
