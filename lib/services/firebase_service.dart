@@ -82,14 +82,24 @@ class FirebaseService {
     }
 
     try {
-      final querySnapshot = await db
-          .collection(collectionName)
-          .orderBy('_firebaseCreatedAt', descending: true)
-          .get();
+      // First try to get documents with ordering by _firebaseCreatedAt
+      QuerySnapshot querySnapshot;
+      try {
+        querySnapshot = await db
+            .collection(collectionName)
+            .orderBy('_firebaseCreatedAt', descending: true)
+            .get();
+      } catch (orderError) {
+        // If ordering fails (field doesn't exist), get all documents without ordering
+        querySnapshot = await db.collection(collectionName).get();
+      }
 
-      return querySnapshot.docs
-          .map((doc) => IpoModel.fromFirestore(doc.data(), doc.id))
+      final ipos = querySnapshot.docs
+          .map((doc) => IpoModel.fromFirestore(
+              doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+
+      return ipos;
     } catch (e) {
       throw Exception('Error getting IPOs from analysis collection: $e');
     }
@@ -159,6 +169,7 @@ class FirebaseService {
     String? rhpLink,
     String? anchorLink,
     String? expectedPremium,
+    String? companyLogo,
   }) async {
     final db = firestore;
     if (db == null) {
@@ -205,6 +216,15 @@ class FirebaseService {
           updateData['expectedPremium'] = expectedPremium;
         } else {
           updateData['expectedPremium'] = FieldValue.delete();
+        }
+      }
+
+      // Handle company logo in company_headers
+      if (companyLogo != null) {
+        if (companyLogo.isNotEmpty) {
+          updateData['company_headers.company_logo'] = companyLogo;
+        } else {
+          updateData['company_headers.company_logo'] = FieldValue.delete();
         }
       }
 
@@ -387,8 +407,15 @@ class FirebaseService {
     }
 
     try {
+      // Define allowed categories
+      const allowedCategories = [
+        'listing_soon',
+        'recently_listed',
+        'upcoming_open'
+      ];
+
       final querySnapshot =
-          await db.collection(collectionName).orderBy('companyName').get();
+          await db.collection(collectionName).orderBy('company_name').get();
 
       final seenIds = <String>{};
       final options = <IpoOption>[];
@@ -404,21 +431,6 @@ class FirebaseService {
         // For API calls, prefer numeric ipo_id
         if (data['ipo_id'] != null) {
           apiId = data['ipo_id'].toString();
-        } else if (data['company_id'] != null) {
-          apiId = data['company_id'].toString();
-        } else if (data['companyId'] != null) {
-          apiId = data['companyId'].toString();
-        } else if (data['company_slug_name'] != null) {
-          apiId = data['company_slug_name'].toString();
-        }
-
-        // For display, prefer company_slug_name or companyId
-        if (data['company_slug_name'] != null) {
-          displayId = data['company_slug_name'].toString();
-        } else if (data['companyId'] != null) {
-          displayId = data['companyId'].toString();
-        } else if (data['ipo_id'] != null) {
-          displayId = data['ipo_id'].toString();
         }
 
         final companyName = data['companyName']?.toString() ??
@@ -429,10 +441,14 @@ class FirebaseService {
 
         final category = data['category']?.toString() ?? 'unknown';
 
-        if (apiId != null && apiId.isNotEmpty && !seenIds.contains(apiId)) {
+        // Only include IPOs from allowed categories
+        if (allowedCategories.contains(category) &&
+            apiId != null &&
+            apiId.isNotEmpty &&
+            !seenIds.contains(apiId)) {
           seenIds.add(apiId);
           options.add(IpoOption(
-            companyId: apiId, // Use the API-compatible ID
+            companyId: apiId,
             companyName: companyName,
             category: category,
           ));

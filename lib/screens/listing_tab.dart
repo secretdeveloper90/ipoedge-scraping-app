@@ -407,8 +407,7 @@ class _ListingTabState extends State<ListingTab> {
         scrollDirection: Axis.horizontal,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minWidth: MediaQuery.of(context).size.width -
-                32,
+            minWidth: MediaQuery.of(context).size.width - 32,
           ),
           child: DataTable(
             columnSpacing: 16,

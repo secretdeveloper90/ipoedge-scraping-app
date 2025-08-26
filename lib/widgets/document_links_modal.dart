@@ -23,6 +23,7 @@ class _DocumentLinksModalState extends State<DocumentLinksModal> {
   final _rhpLinkController = TextEditingController();
   final _anchorLinkController = TextEditingController();
   final _expectedPremiumController = TextEditingController();
+  final _companyLogoController = TextEditingController();
 
   bool _isLoading = false;
   bool _isLoadingData = false;
@@ -38,6 +39,7 @@ class _DocumentLinksModalState extends State<DocumentLinksModal> {
     _rhpLinkController.text = widget.ipo.rhpLink ?? '';
     _anchorLinkController.text = widget.ipo.anchorLink ?? '';
     _expectedPremiumController.text = widget.ipo.expectedPremium ?? '';
+    _companyLogoController.text = widget.ipo.companyLogo ?? '';
   }
 
   @override
@@ -46,6 +48,7 @@ class _DocumentLinksModalState extends State<DocumentLinksModal> {
     _rhpLinkController.dispose();
     _anchorLinkController.dispose();
     _expectedPremiumController.dispose();
+    _companyLogoController.dispose();
     super.dispose();
   }
 
@@ -94,6 +97,9 @@ class _DocumentLinksModalState extends State<DocumentLinksModal> {
         expectedPremium: _expectedPremiumController.text.trim().isEmpty
             ? '' // Empty string to remove the field
             : _expectedPremiumController.text.trim(),
+        companyLogo: _companyLogoController.text.trim().isEmpty
+            ? '' // Empty string to remove the field
+            : _companyLogoController.text.trim(),
       );
 
       widget.onSaved();
@@ -221,6 +227,23 @@ class _DocumentLinksModalState extends State<DocumentLinksModal> {
               ),
               keyboardType: TextInputType.text,
               maxLines: 1,
+            ),
+            const SizedBox(height: 16),
+
+            // Company Logo Section
+            Text(
+              'Company Logo',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            _buildLinkField(
+              controller: _companyLogoController,
+              label: 'Company Logo URL',
+              hint: 'Enter company logo image URL',
+              icon: Icons.business,
             ),
             const SizedBox(height: 8),
           ],

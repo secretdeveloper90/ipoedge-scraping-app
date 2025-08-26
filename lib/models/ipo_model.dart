@@ -11,6 +11,8 @@ class IpoModel {
   final String? anchorLink;
   // Expected premium
   final String? expectedPremium;
+  // Company logo
+  final String? companyLogo;
 
   IpoModel({
     this.id,
@@ -23,6 +25,7 @@ class IpoModel {
     this.rhpLink,
     this.anchorLink,
     this.expectedPremium,
+    this.companyLogo,
   });
 
   factory IpoModel.fromJson(Map<String, dynamic> json) {
@@ -58,6 +61,7 @@ class IpoModel {
       anchorLink: json['anchorLink']?.toString() ??
           json['document_links']?['anchor']?.toString(),
       expectedPremium: json['expectedPremium']?.toString(),
+      companyLogo: null, // Manually managed, don't populate from API
     );
   }
 
@@ -73,6 +77,7 @@ class IpoModel {
       'rhpLink': rhpLink,
       'anchorLink': anchorLink,
       'expectedPremium': expectedPremium,
+      'companyLogo': companyLogo,
     };
   }
 
@@ -98,12 +103,6 @@ class IpoModel {
     firestoreData['_firebaseCreatedAt'] = createdAt ?? DateTime.now();
     firestoreData['_firebaseUpdatedAt'] = DateTime.now();
 
-    // Add essential fields for querying (if not already present)
-    firestoreData['companyId'] = companyId;
-    if (companyName != null) {
-      firestoreData['companyName'] = companyName;
-    }
-
     // Add document links as nested object
     final documentLinksData = <String, String?>{};
     if (drhpLink != null && drhpLink!.isNotEmpty) {
@@ -125,6 +124,15 @@ class IpoModel {
       firestoreData['expectedPremium'] = expectedPremium;
     }
 
+    // Add company logo to company_headers
+    if (companyLogo != null && companyLogo!.isNotEmpty) {
+      // Ensure company_headers exists
+      if (firestoreData['company_headers'] == null) {
+        firestoreData['company_headers'] = <String, dynamic>{};
+      }
+      firestoreData['company_headers']['company_logo'] = companyLogo;
+    }
+
     return firestoreData;
   }
 
@@ -142,6 +150,14 @@ class IpoModel {
       'research_reports',
       'post_page_link',
       'post_analysis',
+      'company_events',
+      'tableData',
+      'ipo_rhp_document',
+      'ipo_drhp_document',
+      'rhp_external_document',
+      'stock_page_url',
+      'subscription_modified',
+      'company_logo'
     };
 
     if (depth > maxDepth) {
@@ -263,6 +279,7 @@ class IpoModel {
     String? rhpLink,
     String? anchorLink,
     String? expectedPremium,
+    String? companyLogo,
   }) {
     return IpoModel(
       id: id ?? this.id,
@@ -275,6 +292,7 @@ class IpoModel {
       rhpLink: rhpLink ?? this.rhpLink,
       anchorLink: anchorLink ?? this.anchorLink,
       expectedPremium: expectedPremium ?? this.expectedPremium,
+      companyLogo: companyLogo ?? this.companyLogo,
     );
   }
 
