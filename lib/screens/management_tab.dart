@@ -395,12 +395,13 @@ class _ManagementTabState extends State<ManagementTab> {
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 3,
                 shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                minimumSize: const Size(0, 44), // Medium button height
               ),
             ),
           ),
@@ -433,12 +434,13 @@ class _ManagementTabState extends State<ManagementTab> {
                     : Colors.orange,
                 foregroundColor: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 3,
                 shadowColor: Colors.orange.withOpacity(0.3),
+                minimumSize: const Size(0, 44), // Medium button height
               ),
             ),
           ),
@@ -453,8 +455,8 @@ class _ManagementTabState extends State<ManagementTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-            padding: const EdgeInsets.all(6.0),
+            margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
+            padding: const EdgeInsets.all(4.0),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.centerLeft,
@@ -464,63 +466,63 @@ class _ManagementTabState extends State<ManagementTab> {
                   Theme.of(context).primaryColor.withOpacity(0.05),
                 ],
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: Theme.of(context).primaryColor.withOpacity(0.2),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Theme.of(context).primaryColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.dashboard_customize_rounded,
-                    size: 26,
+                    size: 20,
                     color: Theme.of(context).primaryColor,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Saved IPOs',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).primaryColor,
-                          letterSpacing: 0.3,
-                          fontSize: 18,
+                          letterSpacing: 0.2,
+                          fontSize: 16,
                         ),
                   ),
                 ),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).primaryColor.withOpacity(0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
+                        color: Theme.of(context).primaryColor.withOpacity(0.2),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
                   child: Text(
                     '${_savedIpos.length}',
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -642,11 +644,11 @@ class _ManagementTabState extends State<ManagementTab> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: double.infinity,
         child: DataTable(
-          columnSpacing: 8,
-          horizontalMargin: 12,
+          columnSpacing: 0,
+          horizontalMargin: 0,
           headingRowHeight: 56,
           dataRowMinHeight: 72,
           dataRowMaxHeight: 72,
@@ -655,23 +657,25 @@ class _ManagementTabState extends State<ManagementTab> {
             color: Theme.of(context).primaryColor,
             fontSize: 14,
           ),
-          columns: const [
-            // DataColumn(
-            //   label: SizedBox(
-            //     width: 80,
-            //     child: Text('IPO ID'),
-            //   ),
-            // ),
+          columns: [
             DataColumn(
-              label: SizedBox(
-                width: 150,
-                child: Text('Company Name'),
+              label: Expanded(
+                flex: 3,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  alignment: Alignment.centerLeft,
+                  child: const Text('Company Name'),
+                ),
               ),
             ),
             DataColumn(
-              label: SizedBox(
-                width: 120,
-                child: Text('Actions'),
+              label: Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  alignment: Alignment.center,
+                  child: const Text('Actions'),
+                ),
               ),
             ),
           ],
@@ -694,79 +698,80 @@ class _ManagementTabState extends State<ManagementTab> {
                 //   ),
                 // ),
                 DataCell(
-                  SizedBox(
-                    width: 150,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        ipo.companyName?.isNotEmpty == true
-                            ? ipo.companyName!
-                            : ipo.companyId.isNotEmpty
-                                ? ipo.companyId
-                                : 'Unknown Company',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 3,
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text(
+                      ipo.companyName?.isNotEmpty == true
+                          ? ipo.companyName!
+                          : ipo.companyId.isNotEmpty
+                              ? ipo.companyId
+                              : 'Unknown Company',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 3,
                     ),
                   ),
                 ),
                 DataCell(
-                  SizedBox(
-                    width: 140,
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: IconButton(
-                            icon: const Icon(Icons.link),
-                            color: Colors.blue,
-                            onPressed: () => _manageDocumentLinks(ipo),
-                            tooltip: 'Document Links',
-                            iconSize: 16,
-                            padding: EdgeInsets.zero,
+                        IconButton(
+                          icon: const Icon(Icons.link),
+                          color: Colors.blue,
+                          onPressed: () => _manageDocumentLinks(ipo),
+                          tooltip: 'Document Links',
+                          iconSize: 16,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
                         ),
-                        SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: IconButton(
-                            icon: const Icon(Icons.category),
-                            color: Colors.purple,
-                            onPressed: () => _updateCategoryFromAnalysis(ipo),
-                            tooltip: 'Update Category',
-                            iconSize: 16,
-                            padding: EdgeInsets.zero,
+                        IconButton(
+                          icon: const Icon(Icons.category),
+                          color: Colors.purple,
+                          onPressed: () => _updateCategoryFromAnalysis(ipo),
+                          tooltip: 'Update Category',
+                          iconSize: 16,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
                         ),
-                        SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: IconButton(
-                            icon: const Icon(Icons.refresh),
-                            color: Colors.orange,
-                            onPressed: () => _updateIpo(ipo),
-                            tooltip: 'Update',
-                            iconSize: 16,
-                            padding: EdgeInsets.zero,
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          color: Colors.orange,
+                          onPressed: () => _updateIpo(ipo),
+                          tooltip: 'Update',
+                          iconSize: 16,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
                         ),
-                        SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: IconButton(
-                            icon: const Icon(Icons.delete),
-                            color: Colors.red,
-                            onPressed: () => _deleteIpo(ipo),
-                            tooltip: 'Delete',
-                            iconSize: 16,
-                            padding: EdgeInsets.zero,
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          color: Colors.red,
+                          onPressed: () => _deleteIpo(ipo),
+                          tooltip: 'Delete',
+                          iconSize: 16,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
                         ),
                       ],

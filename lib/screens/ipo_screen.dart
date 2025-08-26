@@ -76,6 +76,7 @@ class _IpoScreenState extends State<IpoScreen> with TickerProviderStateMixin {
 
   Widget _buildTabBar() {
     return Container(
+      height: 60, 
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
