@@ -67,13 +67,47 @@ class _ManagementTabState extends State<ManagementTab> {
       // Fetch updated data from API
       final updatedIpo = await ApiService.getIpoByCompanyId(ipo.companyId);
 
-      // Update in Firebase
-      await FirebaseService.updateIpo(ipo.id!, updatedIpo);
+      // Extract specific fields from the updated IPO data
+      final data = updatedIpo.additionalData;
+
+      // Update only specific fields in Firebase
+      await FirebaseService.updateIpoSpecificFields(
+        ipo.id!,
+        recentlyListed: data?['recentlyListed'] as bool?,
+        subscriptionColor: data?['subscription_color']?.toString(),
+        subscriptionText: data?['subscription_text']?.toString(),
+        subscriptionValue: data?['subscription_value'],
+        listingGains: data?['listing_gains'],
+        sharesOnOffer: data?['shares_on_offer'],
+        subscriptionRate: data?['subscription_rate'],
+      );
 
       _showSnackBar('IPO updated successfully');
       _loadSavedIpos();
     } catch (e) {
       _showSnackBar('Error updating IPO: $e', isError: true);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateCategoryFromAnalysis(IpoModel ipo) async {
+    if (ipo.id == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Update category from IPO analysis collection
+      await FirebaseService.updateCategoryFromAnalysis(ipo.id!, ipo.companyId);
+
+      _showSnackBar('Category updated successfully from IPO analysis');
+      _loadSavedIpos();
+    } catch (e) {
+      _showSnackBar('Error updating category: $e', isError: true);
     } finally {
       setState(() {
         _isLoading = false;
@@ -122,8 +156,21 @@ class _ManagementTabState extends State<ManagementTab> {
             final updatedIpo =
                 await ApiService.getIpoByCompanyId(ipo.companyId);
 
-            // Update in Firebase
-            await FirebaseService.updateIpo(ipo.id!, updatedIpo);
+            // Extract specific fields from the updated IPO data
+            final data = updatedIpo.additionalData;
+
+            // Update only specific fields in Firebase
+            await FirebaseService.updateIpoSpecificFields(
+              ipo.id!,
+              category: data?['category']?.toString(),
+              recentlyListed: data?['recentlyListed'] as bool?,
+              subscriptionColor: data?['subscription_color']?.toString(),
+              subscriptionText: data?['subscription_text']?.toString(),
+              subscriptionValue: data?['subscription_value'],
+              listingGains: data?['listing_gains'],
+              sharesOnOffer: data?['shares_on_offer'],
+              subscriptionRate: data?['subscription_rate'],
+            );
 
             return {
               'success': true,
@@ -609,12 +656,12 @@ class _ManagementTabState extends State<ManagementTab> {
             fontSize: 14,
           ),
           columns: const [
-            DataColumn(
-              label: SizedBox(
-                width: 80,
-                child: Text('IPO ID'),
-              ),
-            ),
+            // DataColumn(
+            //   label: SizedBox(
+            //     width: 80,
+            //     child: Text('IPO ID'),
+            //   ),
+            // ),
             DataColumn(
               label: SizedBox(
                 width: 150,
@@ -631,21 +678,21 @@ class _ManagementTabState extends State<ManagementTab> {
           rows: _savedIpos.map((ipo) {
             return DataRow(
               cells: [
-                DataCell(
-                  SizedBox(
-                    width: 80,
-                    child: Text(
-                      ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
-                  ),
-                ),
+                // DataCell(
+                //   SizedBox(
+                //     width: 80,
+                //     child: Text(
+                //       ipo.companyId.isNotEmpty ? ipo.companyId : 'N/A',
+                //       style: TextStyle(
+                //         fontSize: 12,
+                //         fontWeight: FontWeight.w600,
+                //         color: Theme.of(context).primaryColor,
+                //       ),
+                //       overflow: TextOverflow.ellipsis,
+                //       maxLines: 2,
+                //     ),
+                //   ),
+                // ),
                 DataCell(
                   SizedBox(
                     width: 150,
@@ -670,7 +717,7 @@ class _ManagementTabState extends State<ManagementTab> {
                 ),
                 DataCell(
                   SizedBox(
-                    width: 100,
+                    width: 140,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -682,6 +729,18 @@ class _ManagementTabState extends State<ManagementTab> {
                             color: Colors.blue,
                             onPressed: () => _manageDocumentLinks(ipo),
                             tooltip: 'Document Links',
+                            iconSize: 16,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: IconButton(
+                            icon: const Icon(Icons.category),
+                            color: Colors.purple,
+                            onPressed: () => _updateCategoryFromAnalysis(ipo),
+                            tooltip: 'Update Category',
                             iconSize: 16,
                             padding: EdgeInsets.zero,
                           ),

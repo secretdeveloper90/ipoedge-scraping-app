@@ -247,6 +247,237 @@ class FirebaseService {
     }
   }
 
+  // Update only specific IPO fields (category, subscription data, listing data)
+  static Future<void> updateIpoSpecificFields(
+    String id, {
+    String? category,
+    bool? recentlyListed,
+    String? subscriptionColor,
+    String? subscriptionText,
+    dynamic subscriptionValue,
+    dynamic listingGains,
+    dynamic sharesOnOffer,
+    dynamic subscriptionRate,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final updateData = <String, dynamic>{};
+
+      // Update Firebase timestamp
+      updateData['_firebaseUpdatedAt'] = DateTime.now();
+
+      // Update category field
+      if (category != null) {
+        updateData['category'] = category;
+      }
+
+      // Update recentlyListed field
+      if (recentlyListed != null) {
+        updateData['recentlyListed'] = recentlyListed;
+      }
+
+      // Update subscription-related fields
+      if (subscriptionColor != null) {
+        updateData['subscription_color'] = subscriptionColor;
+      }
+      if (subscriptionText != null) {
+        updateData['subscription_text'] = subscriptionText;
+      }
+      if (subscriptionValue != null) {
+        updateData['subscription_value'] = subscriptionValue;
+      }
+
+      // Update listing gains
+      if (listingGains != null) {
+        updateData['listing_gains'] = listingGains;
+      }
+
+      // Update shares on offer
+      if (sharesOnOffer != null) {
+        updateData['shares_on_offer'] = sharesOnOffer;
+      }
+
+      // Update subscription rate
+      if (subscriptionRate != null) {
+        updateData['subscription_rate'] = subscriptionRate;
+      }
+
+      // Only update if there are fields to update
+      if (updateData.length > 1) {
+        // More than just the timestamp
+        await db.collection(iposCollectionName).doc(id).update(updateData);
+      }
+    } catch (e) {
+      throw Exception('Error updating IPO specific fields: $e');
+    }
+  }
+
+  // Get category from IPO analysis collection by company ID
+  static Future<String?> getCategoryFromIpoAnalysis(String companyId) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      print('Searching for company ID: $companyId in ipo_analysis collection');
+
+      // Only check for these specific categories
+      const allowedCategories = [
+        'listing_soon',
+        'recently_listed',
+        'upcoming_open'
+      ];
+
+      // Try multiple field names that might contain the company identifier
+      final searchFields = [
+        'company_id',
+        'ipo_id',
+        'company_slug_name',
+        'companyId',
+        'company_name',
+        'company_short_name',
+      ];
+
+      for (final fieldName in searchFields) {
+        print('Trying field: $fieldName');
+
+        final querySnapshot = await db
+            .collection(collectionName)
+            .where(fieldName, isEqualTo: companyId)
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final data = querySnapshot.docs.first.data();
+          final category = data['category']?.toString();
+          print('Found match in field $fieldName, category: $category');
+
+          // Only return category if it's in the allowed list
+          if (category != null && allowedCategories.contains(category)) {
+            return category;
+          } else {
+            print(
+                'Category $category is not in allowed categories: $allowedCategories');
+          }
+        }
+      }
+
+      // If exact match fails, try partial matching within allowed categories only
+      print(
+          'Exact match failed, trying partial matching in allowed categories...');
+
+      // Query only documents with allowed categories
+      for (final allowedCategory in allowedCategories) {
+        final categoryDocs = await db
+            .collection(collectionName)
+            .where('category', isEqualTo: allowedCategory)
+            .limit(50)
+            .get();
+
+        print(
+            'Checking ${categoryDocs.docs.length} documents in category: $allowedCategory');
+
+        for (final doc in categoryDocs.docs) {
+          final data = doc.data();
+
+          // Check if any field contains the companyId as substring
+          for (final fieldName in searchFields) {
+            final fieldValue = data[fieldName]?.toString();
+            if (fieldValue != null) {
+              final lowerFieldValue = fieldValue.toLowerCase();
+              final lowerCompanyId = companyId.toLowerCase();
+              if (lowerFieldValue.contains(lowerCompanyId) ||
+                  lowerCompanyId.contains(lowerFieldValue)) {
+                final category = data['category']?.toString();
+                print(
+                    'Found partial match in field $fieldName: $fieldValue, category: $category');
+                return category;
+              }
+            }
+          }
+        }
+      }
+
+      print(
+          'No match found for company ID: $companyId in allowed categories: $allowedCategories');
+      return null;
+    } catch (e) {
+      print('Error in getCategoryFromIpoAnalysis: $e');
+      throw Exception('Error fetching category from IPO analysis: $e');
+    }
+  }
+
+  // Debug method to see what's in IPO analysis collection
+  static Future<List<Map<String, dynamic>>> debugIpoAnalysisCollection() async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final querySnapshot = await db.collection(collectionName).limit(10).get();
+      final results = <Map<String, dynamic>>[];
+
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        results.add({
+          'docId': doc.id,
+          'company_id': data['company_id'],
+          'ipo_id': data['ipo_id'],
+          'company_slug_name': data['company_slug_name'],
+          'companyId': data['companyId'],
+          'company_name': data['company_name'],
+          'company_short_name': data['company_short_name'],
+          'category': data['category'],
+          'allKeys': data.keys.toList(),
+        });
+      }
+
+      return results;
+    } catch (e) {
+      throw Exception('Error debugging IPO analysis collection: $e');
+    }
+  }
+
+  // Update category in IPO management from IPO analysis
+  static Future<void> updateCategoryFromAnalysis(
+      String id, String companyId) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Get category from IPO analysis collection
+      final category = await getCategoryFromIpoAnalysis(companyId);
+
+      if (category != null) {
+        final updateData = <String, dynamic>{
+          'category': category,
+          '_firebaseUpdatedAt': DateTime.now(),
+        };
+
+        await db.collection(iposCollectionName).doc(id).update(updateData);
+      } else {
+        // Debug: Show what's available in the collection
+        final debugData = await debugIpoAnalysisCollection();
+        print('Available IPO analysis data:');
+        for (final item in debugData) {
+          print('Doc: ${item['docId']}, Company fields: ${item}');
+        }
+        throw Exception(
+            'Category not found in IPO analysis for company: $companyId. Check debug output above.');
+      }
+    } catch (e) {
+      throw Exception('Error updating category from analysis: $e');
+    }
+  }
+
   // Delete an IPO
   static Future<void> deleteIpo(String id) async {
     final db = firestore;
@@ -613,7 +844,90 @@ class FirebaseService {
     }
   }
 
-  // Bulk update multiple IPOs using batch operations
+  // Bulk update multiple IPOs using batch operations (specific fields only)
+  static Future<Map<String, dynamic>> bulkUpdateIposSpecificFields(
+    List<Map<String, dynamic>> ipoUpdates,
+  ) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final batch = db.batch();
+      int successCount = 0;
+      int failureCount = 0;
+      final List<String> failedCompanies = [];
+
+      for (final update in ipoUpdates) {
+        try {
+          final String docId = update['docId'] as String;
+          final IpoModel ipo = update['ipo'] as IpoModel;
+          final data = ipo.additionalData;
+
+          final updateData = <String, dynamic>{};
+
+          // Update Firebase timestamp
+          updateData['_firebaseUpdatedAt'] = DateTime.now();
+
+          // Extract and update only specific fields
+          if (data != null) {
+            if (data.containsKey('category')) {
+              updateData['category'] = data['category'];
+            }
+            if (data.containsKey('recentlyListed')) {
+              updateData['recentlyListed'] = data['recentlyListed'];
+            }
+            if (data.containsKey('subscription_color')) {
+              updateData['subscription_color'] = data['subscription_color'];
+            }
+            if (data.containsKey('subscription_text')) {
+              updateData['subscription_text'] = data['subscription_text'];
+            }
+            if (data.containsKey('subscription_value')) {
+              updateData['subscription_value'] = data['subscription_value'];
+            }
+            if (data.containsKey('listing_gains')) {
+              updateData['listing_gains'] = data['listing_gains'];
+            }
+            if (data.containsKey('shares_on_offer')) {
+              updateData['shares_on_offer'] = data['shares_on_offer'];
+            }
+            if (data.containsKey('subscription_rate')) {
+              updateData['subscription_rate'] = data['subscription_rate'];
+            }
+          }
+
+          // Only update if there are fields to update
+          if (updateData.length > 1) {
+            // More than just the timestamp
+            final docRef = db.collection(iposCollectionName).doc(docId);
+            batch.update(docRef, updateData);
+          }
+          successCount++;
+        } catch (e) {
+          failureCount++;
+          final companyName = (update['ipo'] as IpoModel).companyName ??
+              (update['ipo'] as IpoModel).companyId;
+          failedCompanies.add(companyName);
+        }
+      }
+
+      if (successCount > 0) {
+        await batch.commit();
+      }
+
+      return {
+        'successCount': successCount,
+        'failureCount': failureCount,
+        'failedCompanies': failedCompanies,
+      };
+    } catch (e) {
+      throw Exception('Error during bulk update: $e');
+    }
+  }
+
+  // Bulk update multiple IPOs using batch operations (full update - deprecated)
   static Future<Map<String, dynamic>> bulkUpdateIpos(
     List<Map<String, dynamic>> ipoUpdates,
   ) async {
