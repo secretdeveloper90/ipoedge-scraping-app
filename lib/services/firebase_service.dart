@@ -514,7 +514,7 @@ class FirebaseService {
           ipoId = headers['ipo_id']?.toString();
         }
 
-          if (ipoId != null &&
+        if (ipoId != null &&
             companyIds.contains(ipoId) &&
             !existingIds.contains(ipoId)) {
           existingIds.add(ipoId);

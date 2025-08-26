@@ -151,11 +151,6 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
           uniqueIpoIds.where((id) => !existingIds.contains(id)).toList();
       final skippedCount = existingIds.length;
 
-      if (existingIds.isNotEmpty) {
-        _showSnackBar(
-            '${existingIds.length} IPO(s) already exist and will be skipped');
-      }
-
       if (newIpoIds.isEmpty) {
         _showSnackBar(
             'All IPOs already exist in the database. No new IPOs to add.');
@@ -265,9 +260,9 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Bulk Add/Update'),
+        title: const Text('Confirm Bulk Add'),
         content: Text(
-          'You are about to add/update $count IPOs. Existing IPOs will be updated with latest data and categories. '
+          'You are about to add $count IPOs. Existing IPOs will be skipped and only new IPOs will be added. '
           'This may take several minutes to complete. Do you want to continue?',
         ),
         actions: [
@@ -296,7 +291,7 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Bulk Add/Update Results'),
+        title: const Text('Bulk Add Results'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -315,7 +310,19 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
                     const Icon(Icons.check_circle,
                         color: Colors.green, size: 20),
                     const SizedBox(width: 8),
-                    Text('$successCount successfully added/updated'),
+                    Text('$successCount successfully added'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // Skipped
+              if (skippedCount > 0) ...[
+                Row(
+                  children: [
+                    const Icon(Icons.info, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Text('$skippedCount already existed (skipped)'),
                   ],
                 ),
                 const SizedBox(height: 8),
