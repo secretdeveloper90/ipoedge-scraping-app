@@ -14,9 +14,12 @@ class ManagementTab extends StatefulWidget {
 
 class _ManagementTabState extends State<ManagementTab> {
   List<IpoModel> _savedIpos = [];
+  List<IpoModel> _filteredIpos = [];
   bool _isLoading = false;
   bool _isLoadingSavedIpos = true;
   String? _error;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -26,6 +29,7 @@ class _ManagementTabState extends State<ManagementTab> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -46,6 +50,7 @@ class _ManagementTabState extends State<ManagementTab> {
       final ipos = await FirebaseService.getAllIpos();
       setState(() {
         _savedIpos = ipos;
+        _filteredIpos = ipos;
         _isLoadingSavedIpos = false;
       });
     } catch (e) {
@@ -54,6 +59,24 @@ class _ManagementTabState extends State<ManagementTab> {
         _isLoadingSavedIpos = false;
       });
     }
+  }
+
+  void _filterIpos(String query) {
+    setState(() {
+      _searchQuery = query;
+      if (query.isEmpty) {
+        _filteredIpos = _savedIpos;
+      } else {
+        _filteredIpos = _savedIpos.where((ipo) {
+          final companyName = (ipo.companyName ?? '').toLowerCase();
+          final companyId = ipo.companyId.toLowerCase();
+          final searchLower = query.toLowerCase();
+
+          return companyName.contains(searchLower) ||
+              companyId.contains(searchLower);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _updateIpo(IpoModel ipo) async {
@@ -520,7 +543,9 @@ class _ManagementTabState extends State<ManagementTab> {
                     ],
                   ),
                   child: Text(
-                    '${_savedIpos.length}',
+                    _searchQuery.isNotEmpty
+                        ? '${_filteredIpos.length}/${_savedIpos.length}'
+                        : '${_savedIpos.length}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -531,10 +556,70 @@ class _ManagementTabState extends State<ManagementTab> {
               ],
             ),
           ),
+          _buildSearchBar(),
           Expanded(
             child: _buildSavedIposList(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _filterIpos,
+        decoration: InputDecoration(
+          hintText: 'Search IPOs by company name or ID...',
+          hintStyle: TextStyle(
+            color: Colors.grey[500],
+            fontSize: 14,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: Theme.of(context).primaryColor,
+            size: 20,
+          ),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear,
+                    color: Colors.grey[600],
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterIpos('');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -618,10 +703,88 @@ class _ManagementTabState extends State<ManagementTab> {
       );
     }
 
+    if (_filteredIpos.isEmpty && _searchQuery.isNotEmpty) {
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No IPOs found',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try adjusting your search query',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterIpos('');
+                  },
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear Search'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: _buildManagementDataTable(),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: IconButton(
+        icon: Icon(icon),
+        color: color,
+        onPressed: onPressed,
+        tooltip: tooltip,
+        iconSize: 14,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: 28,
+          minHeight: 28,
+        ),
+        style: IconButton.styleFrom(
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
     );
   }
 
@@ -660,7 +823,7 @@ class _ManagementTabState extends State<ManagementTab> {
           columns: [
             DataColumn(
               label: Expanded(
-                flex: 3,
+                flex: 4,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   alignment: Alignment.centerLeft,
@@ -670,7 +833,7 @@ class _ManagementTabState extends State<ManagementTab> {
             ),
             DataColumn(
               label: Expanded(
-                flex: 2,
+                flex: 3,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   alignment: Alignment.center,
@@ -679,7 +842,7 @@ class _ManagementTabState extends State<ManagementTab> {
               ),
             ),
           ],
-          rows: _savedIpos.map((ipo) {
+          rows: _filteredIpos.map((ipo) {
             return DataRow(
               cells: [
                 // DataCell(
@@ -720,59 +883,38 @@ class _ManagementTabState extends State<ManagementTab> {
                 ),
                 DataCell(
                   Container(
-                    width: double.infinity,
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.link),
+                        _buildActionButton(
+                          icon: Icons.link,
                           color: Colors.blue,
                           onPressed: () => _manageDocumentLinks(ipo),
                           tooltip: 'Document Links',
-                          iconSize: 16,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.category),
+                        const SizedBox(width: 2),
+                        _buildActionButton(
+                          icon: Icons.category,
                           color: Colors.purple,
                           onPressed: () => _updateCategoryFromAnalysis(ipo),
                           tooltip: 'Update Category',
-                          iconSize: 16,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.refresh),
+                        const SizedBox(width: 2),
+                        _buildActionButton(
+                          icon: Icons.refresh,
                           color: Colors.orange,
                           onPressed: () => _updateIpo(ipo),
                           tooltip: 'Update',
-                          iconSize: 16,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
+                        const SizedBox(width: 2),
+                        _buildActionButton(
+                          icon: Icons.delete,
                           color: Colors.red,
                           onPressed: () => _deleteIpo(ipo),
                           tooltip: 'Delete',
-                          iconSize: 16,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
                         ),
                       ],
                     ),
