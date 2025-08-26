@@ -38,9 +38,9 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
     super.dispose();
   }
 
-  // Method to add or update IPOs with their appropriate categories
-  Future<void> _addOrUpdateIposWithCategories(
-      List<IpoModel> ipos, List<String> allIpoIds) async {
+  // Method to add new IPOs with their appropriate categories (skip existing ones)
+  Future<void> _addNewIposWithCategories(
+      List<IpoModel> ipos, List<String> newIpoIds) async {
     // Create a map to track categories for each IPO ID
     final Map<String, String> ipoCategories = {};
 
@@ -68,13 +68,14 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
       }
     }
 
-    // Add or update each IPO with its category
+    // Add each new IPO with its category (only add, don't update)
     for (final ipo in ipos) {
       final category = ipoCategories[ipo.companyId];
       try {
-        await FirebaseService.addOrUpdateIpo(ipo, category: category);
+        // Use addIpo instead of addOrUpdateIpo to ensure we only add new records
+        await FirebaseService.addIpo(ipo, category: category);
       } catch (e) {
-        // Error adding/updating IPO, continue with other IPOs
+        // Error adding IPO, continue with other IPOs
         rethrow;
       }
     }
@@ -145,21 +146,38 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
         return;
       }
 
-      // Process all IPOs (both new and existing) for add/update
-      final allIpoIds = uniqueIpoIds;
+      // Filter out existing IPOs - only process new ones
+      final newIpoIds =
+          uniqueIpoIds.where((id) => !existingIds.contains(id)).toList();
+      final skippedCount = existingIds.length;
 
       if (existingIds.isNotEmpty) {
         _showSnackBar(
-            '${existingIds.length} IPO(s) already exist and will be updated with latest data');
+            '${existingIds.length} IPO(s) already exist and will be skipped');
       }
+
+      if (newIpoIds.isEmpty) {
+        _showSnackBar(
+            'All IPOs already exist in the database. No new IPOs to add.');
+        setState(() {
+          _isBulkLoading = false;
+        });
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
+
+      // Update total items to reflect only new IPOs
+      setState(() {
+        _totalBulkItems = newIpoIds.length;
+      });
 
       // Fetch and process IPOs with enhanced error tracking
       final iposToProcess = <IpoModel>[];
       final failedIds = <Map<String, String>>[];
       const batchSize = 5;
 
-      for (int i = 0; i < allIpoIds.length; i += batchSize) {
-        final batch = allIpoIds.skip(i).take(batchSize).toList();
+      for (int i = 0; i < newIpoIds.length; i += batchSize) {
+        final batch = newIpoIds.skip(i).take(batchSize).toList();
 
         // Process batch concurrently but with limited concurrency
         final futures = batch.map((id) async {
@@ -189,16 +207,16 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
         }
 
         // Small delay between batches to be respectful to the API
-        if (i + batchSize < allIpoIds.length) {
+        if (i + batchSize < newIpoIds.length) {
           await Future.delayed(const Duration(milliseconds: 500));
         }
       }
 
-      // Add or update successful IPOs to Firebase with their categories
+      // Add successful IPOs to Firebase with their categories (only new ones)
       if (iposToProcess.isNotEmpty) {
         try {
-          // Group IPOs by their categories and add/update them
-          await _addOrUpdateIposWithCategories(iposToProcess, allIpoIds);
+          // Group IPOs by their categories and add them (not update since they're all new)
+          await _addNewIposWithCategories(iposToProcess, newIpoIds);
         } catch (e) {
           _showSnackBar('Error saving IPOs to Firebase: $e', isError: true);
           setState(() {
@@ -212,7 +230,7 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
       // Show detailed results
       await _showBulkResultsDialog(
         successCount: iposToProcess.length,
-        skippedCount: 0, // No longer skipping, we update existing ones
+        skippedCount: skippedCount, // Show how many existing IPOs were skipped
         failedIds: failedIds,
       );
 
@@ -437,10 +455,11 @@ class _BulkAddIpoModalState extends State<BulkAddIpoModal>
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Column(

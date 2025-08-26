@@ -132,16 +132,29 @@ class FirebaseService {
     }
 
     try {
-      final querySnapshot = await db
-          .collection(iposCollectionName)
-          .where('companyId', isEqualTo: companyId)
-          .limit(1)
-          .get();
+      // Get all documents and filter manually since nested field queries work better this way
+      final allDocsSnapshot = await db.collection(iposCollectionName).get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final doc = querySnapshot.docs.first;
-        return IpoModel.fromFirestore(doc.data(), doc.id);
+      for (final doc in allDocsSnapshot.docs) {
+        final data = doc.data();
+        String? ipoId;
+
+        // Check nested company_headers.ipo_id first (this is where the ID is actually stored)
+        if (data['company_headers'] != null) {
+          final headers = data['company_headers'] as Map<String, dynamic>;
+          ipoId = headers['ipo_id']?.toString();
+        }
+
+        // Fallback to other field names (though these likely don't exist)
+        ipoId ??= data['ipo_id']?.toString() ??
+            data['companyId']?.toString() ??
+            data['company_id']?.toString();
+
+        if (ipoId == companyId) {
+          return IpoModel.fromFirestore(data, doc.id);
+        }
       }
+
       return null;
     } catch (e) {
       throw Exception('Error fetching IPO by company ID: $e');
@@ -256,13 +269,30 @@ class FirebaseService {
     }
 
     try {
-      final querySnapshot = await db
-          .collection(iposCollectionName)
-          .where('companyId', isEqualTo: companyId)
-          .limit(1)
-          .get();
+      // Get all documents and filter manually since nested field queries work better this way
+      final allDocsSnapshot = await db.collection(iposCollectionName).get();
 
-      return querySnapshot.docs.isNotEmpty;
+      for (final doc in allDocsSnapshot.docs) {
+        final data = doc.data();
+        String? ipoId;
+
+        // Check nested company_headers.ipo_id first (this is where the ID is actually stored)
+        if (data['company_headers'] != null) {
+          final headers = data['company_headers'] as Map<String, dynamic>;
+          ipoId = headers['ipo_id']?.toString();
+        }
+
+        // Fallback to other field names (though these likely don't exist)
+        ipoId ??= data['ipo_id']?.toString() ??
+            data['companyId']?.toString() ??
+            data['company_id']?.toString();
+
+        if (ipoId == companyId) {
+          return true;
+        }
+      }
+
+      return false;
     } catch (e) {
       throw Exception('Error checking IPO existence: $e');
     }
@@ -471,22 +501,23 @@ class FirebaseService {
     try {
       final existingIds = <String>[];
 
-      // Check in batches to avoid Firestore query limitations
-      const batchSize = 10;
-      for (int i = 0; i < companyIds.length; i += batchSize) {
-        final batch = companyIds.skip(i).take(batchSize).toList();
+      // Get all documents and filter manually since nested field queries don't work well with whereIn
+      final allDocsSnapshot = await db.collection(iposCollectionName).get();
 
-        final querySnapshot = await db
-            .collection(iposCollectionName)
-            .where('companyId', whereIn: batch)
-            .get();
+      for (final doc in allDocsSnapshot.docs) {
+        final data = doc.data();
+        String? ipoId;
 
-        for (final doc in querySnapshot.docs) {
-          final data = doc.data();
-          final companyId = data['companyId']?.toString();
-          if (companyId != null) {
-            existingIds.add(companyId);
-          }
+        // Check nested company_headers.ipo_id first (this is where the ID is actually stored)
+        if (data['company_headers'] != null) {
+          final headers = data['company_headers'] as Map<String, dynamic>;
+          ipoId = headers['ipo_id']?.toString();
+        }
+
+          if (ipoId != null &&
+            companyIds.contains(ipoId) &&
+            !existingIds.contains(ipoId)) {
+          existingIds.add(ipoId);
         }
       }
 
@@ -505,24 +536,28 @@ class FirebaseService {
     }
 
     try {
-      final existingIpos = <String, String>{}; // companyId -> documentId
+      final existingIpos = <String, String>{}; // ipoId -> documentId
 
-      // Check in batches to avoid Firestore query limitations
-      const batchSize = 10;
-      for (int i = 0; i < companyIds.length; i += batchSize) {
-        final batch = companyIds.skip(i).take(batchSize).toList();
+      // Get all documents and filter manually since nested field queries don't work well with whereIn
+      final allDocsSnapshot = await db.collection(iposCollectionName).get();
 
-        final querySnapshot = await db
-            .collection(iposCollectionName)
-            .where('companyId', whereIn: batch)
-            .get();
+      for (final doc in allDocsSnapshot.docs) {
+        final data = doc.data();
+        String? ipoId;
 
-        for (final doc in querySnapshot.docs) {
-          final data = doc.data();
-          final companyId = data['companyId']?.toString();
-          if (companyId != null) {
-            existingIpos[companyId] = doc.id;
-          }
+        // Check nested company_headers.ipo_id first (this is where the ID is actually stored)
+        if (data['company_headers'] != null) {
+          final headers = data['company_headers'] as Map<String, dynamic>;
+          ipoId = headers['ipo_id']?.toString();
+        }
+
+        // Fallback to other field names (though these likely don't exist)
+        ipoId ??= data['ipo_id']?.toString() ??
+            data['companyId']?.toString() ??
+            data['company_id']?.toString();
+
+        if (ipoId != null && companyIds.contains(ipoId)) {
+          existingIpos[ipoId] = doc.id;
         }
       }
 
