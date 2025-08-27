@@ -812,9 +812,9 @@ class _ManagementTabState extends State<ManagementTab> {
         child: DataTable(
           columnSpacing: 0,
           horizontalMargin: 0,
-          headingRowHeight: 56,
-          dataRowMinHeight: 72,
-          dataRowMaxHeight: 72,
+          headingRowHeight: 40,
+          dataRowMinHeight: 48,
+          dataRowMaxHeight: 48,
           headingTextStyle: TextStyle(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).primaryColor,
@@ -864,7 +864,7 @@ class _ManagementTabState extends State<ManagementTab> {
                   Container(
                     width: double.infinity,
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: Text(
                       ipo.companyName?.isNotEmpty == true
                           ? ipo.companyName!
@@ -874,7 +874,7 @@ class _ManagementTabState extends State<ManagementTab> {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        height: 1.3,
+                        height: 1.1,
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 3,
@@ -884,7 +884,7 @@ class _ManagementTabState extends State<ManagementTab> {
                 DataCell(
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
