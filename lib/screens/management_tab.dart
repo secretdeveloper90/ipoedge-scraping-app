@@ -3,7 +3,7 @@ import '../models/ipo_model.dart';
 import '../services/api_service.dart';
 import '../services/firebase_service.dart';
 import '../widgets/bulk_add_ipo_modal.dart';
-import '../widgets/document_links_modal.dart';
+import 'ipo_management_screen.dart';
 
 class ManagementTab extends StatefulWidget {
   const ManagementTab({super.key});
@@ -20,6 +20,10 @@ class _ManagementTabState extends State<ManagementTab> {
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  // Track individual loading states for each IPO
+  final Set<String> _updatingIpos = <String>{};
+  final Set<String> _updatingCategories = <String>{};
 
   @override
   void initState() {
@@ -50,9 +54,17 @@ class _ManagementTabState extends State<ManagementTab> {
       final ipos = await FirebaseService.getAllIpos();
       setState(() {
         _savedIpos = ipos;
-        _filteredIpos = ipos;
         _isLoadingSavedIpos = false;
       });
+
+      // Reapply current search filter if there's an active search
+      if (_searchQuery.isNotEmpty) {
+        _filterIpos(_searchQuery);
+      } else {
+        setState(() {
+          _filteredIpos = ipos;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -83,7 +95,7 @@ class _ManagementTabState extends State<ManagementTab> {
     if (ipo.id == null) return;
 
     setState(() {
-      _isLoading = true;
+      _updatingIpos.add(ipo.id!);
     });
 
     try {
@@ -111,7 +123,7 @@ class _ManagementTabState extends State<ManagementTab> {
       _showSnackBar('Error updating IPO: $e', isError: true);
     } finally {
       setState(() {
-        _isLoading = false;
+        _updatingIpos.remove(ipo.id!);
       });
     }
   }
@@ -120,7 +132,7 @@ class _ManagementTabState extends State<ManagementTab> {
     if (ipo.id == null) return;
 
     setState(() {
-      _isLoading = true;
+      _updatingCategories.add(ipo.id!);
     });
 
     try {
@@ -133,7 +145,7 @@ class _ManagementTabState extends State<ManagementTab> {
       _showSnackBar('Error updating category: $e', isError: true);
     } finally {
       setState(() {
-        _isLoading = false;
+        _updatingCategories.remove(ipo.id!);
       });
     }
   }
@@ -271,17 +283,16 @@ class _ManagementTabState extends State<ManagementTab> {
   }
 
   Future<void> _manageDocumentLinks(IpoModel ipo) async {
-    showDialog(
-      context: context,
-      builder: (context) => DocumentLinksModal(
-        ipo: ipo,
-        onSaved: () {
-          Navigator.of(context).pop();
-          _showSnackBar('Document links updated successfully');
-          _loadSavedIpos(); // Reload to get updated data
-        },
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => IpoManagementScreen(ipo: ipo),
       ),
     );
+
+    if (result == true) {
+      _showSnackBar('Company details and documents updated successfully');
+      _loadSavedIpos(); // Reload to get updated data
+    }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -766,14 +777,24 @@ class _ManagementTabState extends State<ManagementTab> {
     required Color color,
     required VoidCallback onPressed,
     required String tooltip,
+    bool isLoading = false,
   }) {
     return SizedBox(
       width: 28,
       height: 28,
       child: IconButton(
-        icon: Icon(icon),
+        icon: isLoading
+            ? SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              )
+            : Icon(icon),
         color: color,
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         tooltip: tooltip,
         iconSize: 14,
         padding: EdgeInsets.zero,
@@ -890,10 +911,10 @@ class _ManagementTabState extends State<ManagementTab> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildActionButton(
-                          icon: Icons.link,
+                          icon: Icons.business_center,
                           color: Colors.blue,
                           onPressed: () => _manageDocumentLinks(ipo),
-                          tooltip: 'Document Links',
+                          tooltip: 'Company & Documents',
                         ),
                         const SizedBox(width: 2),
                         _buildActionButton(
@@ -901,6 +922,7 @@ class _ManagementTabState extends State<ManagementTab> {
                           color: Colors.purple,
                           onPressed: () => _updateCategoryFromAnalysis(ipo),
                           tooltip: 'Update Category',
+                          isLoading: _updatingCategories.contains(ipo.id),
                         ),
                         const SizedBox(width: 2),
                         _buildActionButton(
@@ -908,6 +930,7 @@ class _ManagementTabState extends State<ManagementTab> {
                           color: Colors.orange,
                           onPressed: () => _updateIpo(ipo),
                           tooltip: 'Update',
+                          isLoading: _updatingIpos.contains(ipo.id),
                         ),
                         const SizedBox(width: 2),
                         _buildActionButton(

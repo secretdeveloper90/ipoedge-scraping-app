@@ -49,6 +49,9 @@ dependencies:
   # URL launcher
   url_launcher: ^6.2.2
 
+  # HTML parsing for web scraping
+  html: ^0.15.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

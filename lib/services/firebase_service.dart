@@ -175,14 +175,19 @@ class FirebaseService {
     }
   }
 
-  // Update only document links for an IPO
-  static Future<void> updateIpoDocumentLinks(
+  // Update company details and document links for an IPO
+  static Future<void> updateIpoDocumentLinksAndCompanyDetails(
     String id, {
     String? drhpLink,
     String? rhpLink,
     String? anchorLink,
     String? expectedPremium,
     String? companyLogo,
+    String? companyName,
+    String? companyAddress,
+    String? companyEmail,
+    String? companyPhone,
+    String? companyWebsite,
   }) async {
     final db = firestore;
     if (db == null) {
@@ -241,9 +246,52 @@ class FirebaseService {
         }
       }
 
+      // Handle company details in nested object
+      final companyDetailsData = <String, dynamic>{};
+      bool hasCompanyDetails = false;
+
+      if (companyName != null && companyName.isNotEmpty) {
+        companyDetailsData['company_name'] = companyName;
+        hasCompanyDetails = true;
+      }
+
+      if (companyAddress != null) {
+        if (companyAddress.isNotEmpty) {
+          companyDetailsData['address'] = companyAddress;
+          hasCompanyDetails = true;
+        }
+      }
+
+      if (companyEmail != null) {
+        if (companyEmail.isNotEmpty) {
+          companyDetailsData['email'] = companyEmail;
+          hasCompanyDetails = true;
+        }
+      }
+
+      if (companyPhone != null) {
+        if (companyPhone.isNotEmpty) {
+          companyDetailsData['phone'] = companyPhone;
+          hasCompanyDetails = true;
+        }
+      }
+
+      if (companyWebsite != null) {
+        if (companyWebsite.isNotEmpty) {
+          companyDetailsData['website'] = companyWebsite;
+          hasCompanyDetails = true;
+        }
+      }
+
+      // If we have any company details, update the nested object
+      if (hasCompanyDetails) {
+        updateData['company_details'] = companyDetailsData;
+      }
+
       await db.collection(iposCollectionName).doc(id).update(updateData);
     } catch (e) {
-      throw Exception('Error updating IPO document links: $e');
+      throw Exception(
+          'Error updating IPO document links and company details: $e');
     }
   }
 
