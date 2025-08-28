@@ -13,8 +13,7 @@ class IpoManagementScreen extends StatefulWidget {
   });
 
   @override
-  State<IpoManagementScreen> createState() =>
-      _IpoManagementScreenState();
+  State<IpoManagementScreen> createState() => _IpoManagementScreenState();
 }
 
 class _IpoManagementScreenState extends State<IpoManagementScreen> {
@@ -189,14 +188,44 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
     }
 
     try {
-      final uri = Uri.parse(url);
+      // Clean and validate the URL
+      String cleanUrl = url.trim();
+
+      // Add https:// if no scheme is provided
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://$cleanUrl';
+      }
+
+      final uri = Uri.parse(cleanUrl);
+
+      // Validate the URI
+      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        _showSnackBar('Invalid URL format. Please use http:// or https://',
+            isError: true);
+        return;
+      }
+
+      if (uri.host.isEmpty) {
+        _showSnackBar('Invalid URL: Missing domain', isError: true);
+        return;
+      }
+
+      // Check if the URL can be launched
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+          webViewConfiguration: const WebViewConfiguration(
+            enableJavaScript: true,
+            enableDomStorage: true,
+          ),
+        );
+        _showSnackBar('Opening URL in browser...');
       } else {
-        _showSnackBar('Could not launch URL', isError: true);
+        _showSnackBar('No app available to open this URL', isError: true);
       }
     } catch (e) {
-      _showSnackBar('Error launching URL: $e', isError: true);
+      _showSnackBar('Error launching URL: ${e.toString()}', isError: true);
     }
   }
 
