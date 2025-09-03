@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/ipo_model.dart';
+import '../models/ipo_analysis_models.dart';
 import '../config/app_config.dart';
 
 class ApiService {
@@ -151,6 +152,53 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error fetching categorized IPOs: $e');
+    }
+  }
+
+  // GET /api/ipos/listing-details – Fetch categorized IPOs with complete data models
+  static Future<Map<String, List<BaseIpoAnalysisModel>>>
+      getCategorizedIposWithModels() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ipos/listing-details'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        final Map<String, List<BaseIpoAnalysisModel>> categorizedIpos = {};
+
+        if (responseData.containsKey('data') && responseData['data'] is Map) {
+          final data = responseData['data'] as Map<String, dynamic>;
+
+          // Process each category with specific models
+          final categories = [
+            'draft_issues',
+            'upcoming_open',
+            'listing_soon',
+            'recently_listed',
+            'gain_loss_analysis'
+          ];
+
+          for (final category in categories) {
+            if (data.containsKey(category) && data[category] is List) {
+              final categoryData = data[category] as List<dynamic>;
+              categorizedIpos[category] = categoryData
+                  .map((json) => BaseIpoAnalysisModel.fromJson(
+                      json as Map<String, dynamic>, category))
+                  .toList();
+            } else {
+              categorizedIpos[category] = [];
+            }
+          }
+        }
+
+        return categorizedIpos;
+      } else {
+        throw Exception('Failed to load IPOs: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching categorized IPOs with models: $e');
     }
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/ipo_model.dart';
+import '../models/ipo_analysis_models.dart';
 import '../services/firebase_service.dart';
 
 class ListingTab extends StatefulWidget {
@@ -10,7 +10,7 @@ class ListingTab extends StatefulWidget {
 }
 
 class _ListingTabState extends State<ListingTab> {
-  Map<String, List<IpoModel>> _categorizedIpos = {};
+  Map<String, List<BaseIpoAnalysisModel>> _categorizedIpos = {};
   bool _isLoading = true;
   bool _isUpdatingFirebase = false;
   String? _error;
@@ -28,11 +28,8 @@ class _ListingTabState extends State<ListingTab> {
     });
 
     try {
-      // Fetch data from Firebase ipo_analysis collection instead of API
-      final allIpos = await FirebaseService.getAllIposFromAnalysis();
-
-      // Categorize the Firebase data
-      final categorizedIpos = _categorizeFirebaseData(allIpos);
+      // Fetch data from Firebase ipo_analysis collection using new models
+      final categorizedIpos = await FirebaseService.getAllIpoAnalysisData();
 
       setState(() {
         _categorizedIpos = categorizedIpos;
@@ -46,62 +43,14 @@ class _ListingTabState extends State<ListingTab> {
     }
   }
 
-  // Categorize Firebase data based on category field or status
-  Map<String, List<IpoModel>> _categorizeFirebaseData(List<IpoModel> ipos) {
-    final Map<String, List<IpoModel>> categorized = {
-      'draft_issues': <IpoModel>[],
-      'upcoming_open': <IpoModel>[],
-      'listing_soon': <IpoModel>[],
-      'recently_listed': <IpoModel>[],
-      'gain_loss_analysis': <IpoModel>[],
-    };
-
-    for (final ipo in ipos) {
-      // Check if the IPO has a category field from Firebase
-      final category = ipo.additionalData?['category']?.toString();
-
-      if (category != null && categorized.containsKey(category)) {
-        categorized[category]!.add(ipo);
-      } else {
-        // Fallback: categorize based on status or other fields from additionalData
-        final status =
-            (ipo.additionalData?['status']?.toString() ?? '').toLowerCase();
-        final listingDate = ipo.additionalData?['listing_date']?.toString() ??
-            ipo.additionalData?['listingDate']?.toString();
-        final listingGain = ipo.additionalData?['listing_gain'] ??
-            ipo.additionalData?['listingGain'] ??
-            ipo.additionalData?['listing_gainP'];
-
-        if (status.contains('draft') || status.contains('drhp')) {
-          categorized['draft_issues']!.add(ipo);
-        } else if (status.contains('upcoming') || status.contains('open')) {
-          categorized['upcoming_open']!.add(ipo);
-        } else if (status.contains('listing') && !status.contains('listed')) {
-          categorized['listing_soon']!.add(ipo);
-        } else if (status.contains('listed') || listingDate != null) {
-          if (listingGain != null) {
-            categorized['gain_loss_analysis']!.add(ipo);
-          } else {
-            categorized['recently_listed']!.add(ipo);
-          }
-        } else {
-          // Default to draft_issues if no clear category
-          categorized['draft_issues']!.add(ipo);
-        }
-      }
-    }
-
-    return categorized;
-  }
-
   Future<void> _updateAllData() async {
     setState(() {
       _isUpdatingFirebase = true;
     });
 
     try {
-      // Fetch fresh data from API and update Firebase ipo_analysis collection
-      await FirebaseService.updateAllIpoData();
+      // Fetch fresh data from API and update Firebase ipo_analysis collection with comprehensive models
+      await FirebaseService.updateAllIpoAnalysisData();
 
       // Reload the display data from Firebase after update
       await _loadIpos();
@@ -385,7 +334,7 @@ class _ListingTabState extends State<ListingTab> {
     );
   }
 
-  Widget _buildDataTable(List<IpoModel> ipos) {
+  Widget _buildDataTable(List<BaseIpoAnalysisModel> ipos) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 4.0),
@@ -446,10 +395,9 @@ class _ListingTabState extends State<ListingTab> {
                   ),
                   DataCell(
                     Text(
-                      ipo.companyName ??
-                          (ipo.companyId.isNotEmpty
-                              ? ipo.companyId
-                              : 'Unknown Company'),
+                      ipo.companyName.isNotEmpty
+                          ? ipo.companyName
+                          : 'Unknown Company',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

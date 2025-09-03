@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import '../models/ipo_model.dart';
+import '../models/ipo_analysis_models.dart';
 import 'api_service.dart';
 
 class FirebaseService {
@@ -708,6 +709,41 @@ class FirebaseService {
     }
   }
 
+  // Update all IPO analysis data using new comprehensive models
+  static Future<void> updateAllIpoAnalysisData() async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Fetch all categorized IPOs with complete data models
+      final categorizedIpos = await ApiService.getCategorizedIposWithModels();
+
+      // Clear existing data in ipo_analysis collection
+      final existingDocs = await db.collection(collectionName).get();
+      final batch = db.batch();
+
+      // Delete existing documents
+      for (final doc in existingDocs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Add all new IPO analysis data with complete object data
+      for (final category in categorizedIpos.entries) {
+        for (final ipo in category.value) {
+          final docRef = db.collection(collectionName).doc();
+          final firestoreData = ipo.toFirestore();
+          batch.set(docRef, firestoreData);
+        }
+      }
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Error updating all IPO analysis data: $e');
+    }
+  }
+
   // Get available IPO options for dropdown selection
   static Future<List<IpoOption>> getAvailableIpoOptions() async {
     final db = firestore;
@@ -1017,6 +1053,49 @@ class FirebaseService {
       };
     } catch (e) {
       throw Exception('Error during bulk update: $e');
+    }
+  }
+
+  // Get all IPO analysis data from Firebase using new models
+  static Future<Map<String, List<BaseIpoAnalysisModel>>>
+      getAllIpoAnalysisData() async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final querySnapshot = await db
+          .collection(collectionName)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final Map<String, List<BaseIpoAnalysisModel>> categorizedIpos = {
+        'draft_issues': <BaseIpoAnalysisModel>[],
+        'upcoming_open': <BaseIpoAnalysisModel>[],
+        'listing_soon': <BaseIpoAnalysisModel>[],
+        'recently_listed': <BaseIpoAnalysisModel>[],
+        'gain_loss_analysis': <BaseIpoAnalysisModel>[],
+      };
+
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        final category = data['category']?.toString();
+
+        if (category != null && categorizedIpos.containsKey(category)) {
+          try {
+            final ipo = BaseIpoAnalysisModel.fromJson(data, category);
+            categorizedIpos[category]!.add(ipo);
+          } catch (e) {
+            // Skip invalid documents
+            continue;
+          }
+        }
+      }
+
+      return categorizedIpos;
+    } catch (e) {
+      throw Exception('Error fetching IPO analysis data: $e');
     }
   }
 }
