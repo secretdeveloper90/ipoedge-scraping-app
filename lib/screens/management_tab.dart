@@ -92,10 +92,11 @@ class _ManagementTabState extends State<ManagementTab> {
   }
 
   Future<void> _updateIpo(IpoModel ipo) async {
-    if (ipo.id == null) return;
+    final ipoId = ipo.id;
+    if (ipoId == null) return;
 
     setState(() {
-      _updatingIpos.add(ipo.id!);
+      _updatingIpos.add(ipoId);
     });
 
     try {
@@ -107,7 +108,7 @@ class _ManagementTabState extends State<ManagementTab> {
 
       // Update only specific fields in Firebase
       await FirebaseService.updateIpoSpecificFields(
-        ipo.id!,
+        ipoId,
         recentlyListed: data?['recentlyListed'] as bool?,
         subscriptionColor: data?['subscription_color']?.toString(),
         subscriptionText: data?['subscription_text']?.toString(),
@@ -123,21 +124,22 @@ class _ManagementTabState extends State<ManagementTab> {
       _showSnackBar('Error updating IPO: $e', isError: true);
     } finally {
       setState(() {
-        _updatingIpos.remove(ipo.id!);
+        _updatingIpos.remove(ipoId);
       });
     }
   }
 
   Future<void> _updateCategoryFromAnalysis(IpoModel ipo) async {
-    if (ipo.id == null) return;
+    final ipoId = ipo.id;
+    if (ipoId == null) return;
 
     setState(() {
-      _updatingCategories.add(ipo.id!);
+      _updatingCategories.add(ipoId);
     });
 
     try {
       // Update category from IPO analysis collection
-      await FirebaseService.updateCategoryFromAnalysis(ipo.id!, ipo.companyId);
+      await FirebaseService.updateCategoryFromAnalysis(ipoId, ipo.companyId);
 
       _showSnackBar('Category updated successfully from IPO analysis');
       _loadSavedIpos();
@@ -145,7 +147,7 @@ class _ManagementTabState extends State<ManagementTab> {
       _showSnackBar('Error updating category: $e', isError: true);
     } finally {
       setState(() {
-        _updatingCategories.remove(ipo.id!);
+        _updatingCategories.remove(ipoId);
       });
     }
   }
@@ -290,7 +292,7 @@ class _ManagementTabState extends State<ManagementTab> {
     );
 
     if (result == true) {
-      _showSnackBar('Company details and documents updated successfully');
+      _showSnackBar('Company information updated successfully');
       _loadSavedIpos(); // Reload to get updated data
     }
   }
@@ -434,7 +436,8 @@ class _ManagementTabState extends State<ManagementTab> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 3,
-                shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                shadowColor:
+                    Theme.of(context).primaryColor.withValues(alpha: 0.3),
                 minimumSize: const Size(0, 44), // Medium button height
               ),
             ),
@@ -473,7 +476,7 @@ class _ManagementTabState extends State<ManagementTab> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 3,
-                shadowColor: Colors.orange.withOpacity(0.3),
+                shadowColor: Colors.orange.withValues(alpha: 0.3),
                 minimumSize: const Size(0, 44), // Medium button height
               ),
             ),
@@ -484,95 +487,94 @@ class _ManagementTabState extends State<ManagementTab> {
   }
 
   Widget _buildSavedIposSection() {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
-            padding: const EdgeInsets.all(4.0),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Theme.of(context).primaryColor.withOpacity(0.1),
-                  Theme.of(context).primaryColor.withOpacity(0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: Theme.of(context).primaryColor.withOpacity(0.2),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
+          padding: const EdgeInsets.all(4.0),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                Theme.of(context).primaryColor.withValues(alpha: 0.05),
               ],
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.dashboard_customize_rounded,
-                    size: 20,
-                    color: Theme.of(context).primaryColor,
-                  ),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Saved IPOs',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                          letterSpacing: 0.2,
-                          fontSize: 16,
-                        ),
-                  ),
+                child: Icon(
+                  Icons.dashboard_customize_rounded,
+                  size: 20,
+                  color: Theme.of(context).primaryColor,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).primaryColor.withOpacity(0.2),
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Saved IPOs',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                        letterSpacing: 0.2,
+                        fontSize: 16,
                       ),
-                    ],
-                  ),
-                  child: Text(
-                    _searchQuery.isNotEmpty
-                        ? '${_filteredIpos.length}/${_savedIpos.length}'
-                        : '${_savedIpos.length}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
                     ),
+                  ],
+                ),
+                child: Text(
+                  _searchQuery.isNotEmpty
+                      ? '${_filteredIpos.length}/${_savedIpos.length}'
+                      : '${_savedIpos.length}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          _buildSearchBar(),
-          Expanded(
-            child: _buildSavedIposList(),
-          ),
-        ],
-      ),
+        ),
+        _buildSearchBar(),
+        Expanded(
+          child: _buildSavedIposList(),
+        ),
+      ],
     );
   }
 
@@ -588,7 +590,7 @@ class _ManagementTabState extends State<ManagementTab> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -645,7 +647,7 @@ class _ManagementTabState extends State<ManagementTab> {
     if (_error != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.5,
           child: Center(
             child: Column(
@@ -684,7 +686,7 @@ class _ManagementTabState extends State<ManagementTab> {
     if (_savedIpos.isEmpty) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.5,
           child: Center(
             child: Column(
@@ -717,7 +719,7 @@ class _ManagementTabState extends State<ManagementTab> {
     if (_filteredIpos.isEmpty && _searchQuery.isNotEmpty) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.5,
           child: Center(
             child: Column(
@@ -822,7 +824,7 @@ class _ManagementTabState extends State<ManagementTab> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

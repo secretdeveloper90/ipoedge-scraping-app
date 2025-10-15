@@ -202,6 +202,55 @@ class ApiService {
     }
   }
 
+  // POST /api/ipos/ipodekho-listing – Fetch IPO listings by category and type
+  static Future<Map<String, dynamic>> getIpodekhoListing({
+    required String categoryForIPOS,
+    required String type,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/ipos/ipodekho-listing'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'CategoryForIPOS': categoryForIPOS,
+              'type': type,
+            }),
+          )
+          .timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to load IPO listing: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching IPO listing: $e');
+    }
+  }
+
+  // GET /api/ipos/ipo-details/:slug – Fetch IPO details by slug
+  static Future<Map<String, dynamic>> getIpoDetailsBySlug(String slug) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ipos/ipo-details/$slug'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else if (response.statusCode == 404) {
+        throw Exception('IPO details not found for slug: $slug');
+      } else {
+        throw Exception('Failed to load IPO details: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching IPO details for slug $slug: $e');
+    }
+  }
+
   // Helper method to check API connectivity
   static Future<bool> checkApiConnectivity() async {
     try {

@@ -231,13 +231,13 @@ class _ManualIpoInputState extends State<ManualIpoInput> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _errorText != null
-                ? Colors.orange.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
+                ? Colors.orange.withValues(alpha: 0.1)
+                : Colors.green.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: _errorText != null
-                  ? Colors.orange.withOpacity(0.3)
-                  : Colors.green.withOpacity(0.3),
+                  ? Colors.orange.withValues(alpha: 0.3)
+                  : Colors.green.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -291,11 +291,13 @@ class _ManualIpoInputState extends State<ManualIpoInput> {
                           id,
                           style: const TextStyle(fontSize: 12),
                         ),
-                        backgroundColor:
-                            Theme.of(context).primaryColor.withOpacity(0.1),
+                        backgroundColor: Theme.of(context)
+                            .primaryColor
+                            .withValues(alpha: 0.1),
                         side: BorderSide(
-                          color:
-                              Theme.of(context).primaryColor.withOpacity(0.3),
+                          color: Theme.of(context)
+                              .primaryColor
+                              .withValues(alpha: 0.3),
                         ),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ))

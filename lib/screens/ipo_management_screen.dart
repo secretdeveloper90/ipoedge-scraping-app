@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/ipo_model.dart';
 import '../services/firebase_service.dart';
-import '../services/ipoji_scraper_service.dart';
+import '../services/api_service.dart';
 
 class IpoManagementScreen extends StatefulWidget {
   final IpoModel ipo;
@@ -17,215 +16,52 @@ class IpoManagementScreen extends StatefulWidget {
 }
 
 class _IpoManagementScreenState extends State<IpoManagementScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _drhpLinkController = TextEditingController();
-  final _rhpLinkController = TextEditingController();
-  final _anchorLinkController = TextEditingController();
+  final _slugController = TextEditingController();
+  final _imageUrlController = TextEditingController();
   final _expectedPremiumController = TextEditingController();
-  final _companyLogoController = TextEditingController();
-
-  // Company details controllers
-  final _companyNameController = TextEditingController();
-  final _companyAddressController = TextEditingController();
-  final _companyEmailController = TextEditingController();
-  final _companyPhoneController = TextEditingController();
-  final _companyWebsiteController = TextEditingController();
-
-  // IPOji scraping
-  final _ipojiUrlController = TextEditingController();
   bool _isLoading = false;
-  bool _isScrapingLoading = false;
+  bool _isSavingAdditionalData = false;
 
   @override
   void initState() {
     super.initState();
-    _populateFields();
-  }
-
-  void _populateFields() {
-    _drhpLinkController.text = widget.ipo.drhpLink ?? '';
-    _rhpLinkController.text = widget.ipo.rhpLink ?? '';
-    _anchorLinkController.text = widget.ipo.anchorLink ?? '';
-    _expectedPremiumController.text = widget.ipo.expectedPremium ?? '';
-
-    // Populate company logo from company_headers.company_logo
-    final additionalData = widget.ipo.additionalData;
-    if (additionalData != null && additionalData['company_headers'] != null) {
-      final companyHeaders =
-          additionalData['company_headers'] as Map<String, dynamic>;
-      _companyLogoController.text =
-          companyHeaders['company_logo']?.toString() ?? '';
-    } else {
-      _companyLogoController.text = widget.ipo.companyLogo ?? '';
-    }
-
-    // Populate company details from nested company_details object
-    if (additionalData != null && additionalData['company_details'] != null) {
-      final companyDetails =
-          additionalData['company_details'] as Map<String, dynamic>;
-      _companyNameController.text =
-          companyDetails['company_name']?.toString() ?? '';
-      _companyAddressController.text =
-          companyDetails['address']?.toString() ?? '';
-      _companyEmailController.text = companyDetails['email']?.toString() ?? '';
-      _companyPhoneController.text = companyDetails['phone']?.toString() ?? '';
-      _companyWebsiteController.text =
-          companyDetails['website']?.toString() ?? '';
-    } else {
-      // Fallback to root level fields for backward compatibility
-      _companyNameController.text = '';
-      if (additionalData != null) {
-        _companyAddressController.text =
-            additionalData['company_address']?.toString() ?? '';
-        _companyEmailController.text =
-            additionalData['company_email']?.toString() ?? '';
-        _companyPhoneController.text =
-            additionalData['company_phone']?.toString() ?? '';
-        _companyWebsiteController.text =
-            additionalData['company_website']?.toString() ?? '';
-      }
-    }
+    _loadExistingData();
   }
 
   @override
   void dispose() {
-    _drhpLinkController.dispose();
-    _rhpLinkController.dispose();
-    _anchorLinkController.dispose();
+    _slugController.dispose();
+    _imageUrlController.dispose();
     _expectedPremiumController.dispose();
-    _companyLogoController.dispose();
-    _companyNameController.dispose();
-    _companyAddressController.dispose();
-    _companyEmailController.dispose();
-    _companyPhoneController.dispose();
-    _companyWebsiteController.dispose();
-    _ipojiUrlController.dispose();
     super.dispose();
   }
 
-  String? _validateUrl(String? value) {
-    if (value == null || value.isEmpty) {
-      return null; // Optional field
-    }
-
+  // Load existing slug, image URL, and expected premium from Firebase if they exist
+  Future<void> _loadExistingData() async {
     try {
-      final uri = Uri.parse(value);
-      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
-        return 'Please enter a valid URL (http:// or https://)';
-      }
-      return null;
-    } catch (e) {
-      return 'Please enter a valid URL';
-    }
-  }
+      if (widget.ipo.id != null && widget.ipo.id!.isNotEmpty) {
+        final existingSlug =
+            await FirebaseService.getSlugForIpo(widget.ipo.id!);
+        final existingImageUrl =
+            await FirebaseService.getImageUrlForIpo(widget.ipo.id!);
+        final existingExpectedPremium =
+            await FirebaseService.getExpectedPremiumForIpo(widget.ipo.id!);
 
-  Future<void> _saveDocumentLinks() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (widget.ipo.id == null) {
-      _showSnackBar('IPO ID is required to save document links', isError: true);
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await FirebaseService.updateIpoDocumentLinksAndCompanyDetails(
-        widget.ipo.id!,
-        drhpLink: _drhpLinkController.text.trim().isEmpty
-            ? ''
-            : _drhpLinkController.text.trim(),
-        rhpLink: _rhpLinkController.text.trim().isEmpty
-            ? ''
-            : _rhpLinkController.text.trim(),
-        anchorLink: _anchorLinkController.text.trim().isEmpty
-            ? ''
-            : _anchorLinkController.text.trim(),
-        expectedPremium: _expectedPremiumController.text.trim().isEmpty
-            ? ''
-            : _expectedPremiumController.text.trim(),
-        companyLogo: _companyLogoController.text.trim().isEmpty
-            ? ''
-            : _companyLogoController.text.trim(),
-        companyName: _companyNameController.text.trim().isEmpty
-            ? null
-            : _companyNameController.text.trim(),
-        companyAddress: _companyAddressController.text.trim().isEmpty
-            ? null
-            : _companyAddressController.text.trim(),
-        companyEmail: _companyEmailController.text.trim().isEmpty
-            ? null
-            : _companyEmailController.text.trim(),
-        companyPhone: _companyPhoneController.text.trim().isEmpty
-            ? null
-            : _companyPhoneController.text.trim(),
-        companyWebsite: _companyWebsiteController.text.trim().isEmpty
-            ? null
-            : _companyWebsiteController.text.trim(),
-      );
-
-      _showSnackBar('Document links updated successfully');
-      if (mounted) {
-        Navigator.of(context).pop(true); // Return true to indicate success
+        setState(() {
+          if (existingSlug != null && existingSlug.isNotEmpty) {
+            _slugController.text = existingSlug;
+          }
+          if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
+            _imageUrlController.text = existingImageUrl;
+          }
+          if (existingExpectedPremium != null &&
+              existingExpectedPremium.isNotEmpty) {
+            _expectedPremiumController.text = existingExpectedPremium;
+          }
+        });
       }
     } catch (e) {
-      _showSnackBar('Error saving document links: $e', isError: true);
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _launchUrl(String? url) async {
-    if (url == null || url.isEmpty) {
-      _showSnackBar('No URL provided', isError: true);
-      return;
-    }
-
-    try {
-      // Clean and validate the URL
-      String cleanUrl = url.trim();
-
-      // Add https:// if no scheme is provided
-      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-        cleanUrl = 'https://$cleanUrl';
-      }
-
-      final uri = Uri.parse(cleanUrl);
-
-      // Validate the URI
-      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
-        _showSnackBar('Invalid URL format. Please use http:// or https://',
-            isError: true);
-        return;
-      }
-
-      if (uri.host.isEmpty) {
-        _showSnackBar('Invalid URL: Missing domain', isError: true);
-        return;
-      }
-
-      // Check if the URL can be launched
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-          webViewConfiguration: const WebViewConfiguration(
-            enableJavaScript: true,
-            enableDomStorage: true,
-          ),
-        );
-        _showSnackBar('Opening URL in browser...');
-      } else {
-        _showSnackBar('No app available to open this URL', isError: true);
-      }
-    } catch (e) {
-      _showSnackBar('Error launching URL: ${e.toString()}', isError: true);
+      // Silently handle error - fields will remain empty
     }
   }
 
@@ -239,79 +75,94 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
     );
   }
 
-  Future<void> _scrapeIpojiData() async {
-    final url = _ipojiUrlController.text.trim();
-    if (url.isEmpty) {
-      _showSnackBar('Please enter an IPOji URL', isError: true);
-      return;
-    }
+  Future<void> _saveAdditionalData() async {
+    final imageUrl = _imageUrlController.text.trim();
+    final expectedPremium = _expectedPremiumController.text.trim();
 
-    if (!url.contains('ipoji.com/ipo/')) {
-      _showSnackBar('Please enter a valid IPOji IPO URL', isError: true);
+    if (imageUrl.isEmpty && expectedPremium.isEmpty) {
+      _showSnackBar(
+          'Please enter at least one field (Image URL or Expected Premium)',
+          isError: true);
       return;
     }
 
     setState(() {
-      _isScrapingLoading = true;
+      _isSavingAdditionalData = true;
     });
 
     try {
-      final scrapedData = await IpojiScraperService.scrapeIpojiData(url);
+      if (widget.ipo.id != null && widget.ipo.id!.isNotEmpty) {
+        List<String> savedFields = [];
 
-      // Populate company details
-      final companyDetails =
-          scrapedData['company_details'] as Map<String, String?>?;
-      if (companyDetails != null) {
-        if (companyDetails['company_name']?.isNotEmpty == true) {
-          _companyNameController.text = companyDetails['company_name']!;
+        // Save image URL if provided
+        if (imageUrl.isNotEmpty) {
+          await FirebaseService.saveImageUrl(widget.ipo.id!, imageUrl);
+          savedFields.add('Image URL');
+          _imageUrlController.clear();
         }
-        if (companyDetails['address']?.isNotEmpty == true) {
-          _companyAddressController.text = companyDetails['address']!;
+
+        // Save expected premium if provided
+        if (expectedPremium.isNotEmpty) {
+          await FirebaseService.saveExpectedPremium(
+              widget.ipo.id!, expectedPremium);
+          savedFields.add('Expected Premium');
+          _expectedPremiumController.clear();
         }
-        if (companyDetails['email']?.isNotEmpty == true) {
-          _companyEmailController.text = companyDetails['email']!;
-        }
-        if (companyDetails['phone']?.isNotEmpty == true) {
-          _companyPhoneController.text = companyDetails['phone']!;
-        }
-        if (companyDetails['website']?.isNotEmpty == true) {
-          _companyWebsiteController.text = companyDetails['website']!;
-        }
+
+        _showSnackBar('${savedFields.join(' and ')} saved successfully!');
+      } else {
+        _showSnackBar('Error: No IPO ID found to update', isError: true);
       }
-
-      // Populate document links
-      final documentLinks =
-          scrapedData['document_links'] as Map<String, String?>?;
-      if (documentLinks != null) {
-        if (documentLinks['drhp']?.isNotEmpty == true) {
-          _drhpLinkController.text = documentLinks['drhp']!;
-        }
-        if (documentLinks['rhp']?.isNotEmpty == true) {
-          _rhpLinkController.text = documentLinks['rhp']!;
-        }
-        if (documentLinks['anchor']?.isNotEmpty == true) {
-          _anchorLinkController.text = documentLinks['anchor']!;
-        }
-      }
-
-      // Populate company logo
-      final companyLogo = scrapedData['company_logo'] as String?;
-      if (companyLogo?.isNotEmpty == true) {
-        _companyLogoController.text = companyLogo!;
-      }
-
-      // Populate expected premium
-      final expectedPremium = scrapedData['expected_premium'] as String?;
-      if (expectedPremium?.isNotEmpty == true) {
-        _expectedPremiumController.text = expectedPremium!;
-      }
-
-      _showSnackBar('Data scraped successfully from IPOji!');
     } catch (e) {
-      _showSnackBar('Error scraping data: $e', isError: true);
+      _showSnackBar('Error saving data: $e', isError: true);
     } finally {
       setState(() {
-        _isScrapingLoading = false;
+        _isSavingAdditionalData = false;
+      });
+    }
+  }
+
+  Future<void> _storeIpoData() async {
+    final slug = _slugController.text.trim();
+    if (slug.isEmpty) {
+      _showSnackBar('Please enter an IPO slug', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Fetch IPO details from API
+      final ipoData = await ApiService.getIpoDetailsBySlug(slug);
+
+      // Extract the actual IPO data from the nested response structure
+      final actualIpoData = ipoData['data']['Data'] as Map<String, dynamic>;
+
+      // Merge the new data with existing IPO using the IPO ID from widget
+      if (widget.ipo.id != null && widget.ipo.id!.isNotEmpty) {
+        // Merge new data with existing IPO (preserves all existing fields)
+        await FirebaseService.updateIpoWithSpecificData(
+          widget.ipo.id!,
+          actualIpoData,
+          slug, // Pass the slug for storage
+        );
+
+        _showSnackBar(
+            'IPO data merged successfully! Existing data preserved. ID: ${widget.ipo.id}');
+      } else {
+        _showSnackBar('Error: No IPO ID found to update', isError: true);
+        return;
+      }
+
+      // Clear the slug field after successful storage
+      _slugController.clear();
+    } catch (e) {
+      _showSnackBar('Error storing IPO data: $e', isError: true);
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
@@ -319,20 +170,15 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Company & Document Management',
+              widget.ipo.companyName ?? 'IPO Data Storage',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                  ),
-            ),
-            Text(
-              widget.ipo.companyName ?? widget.ipo.companyId,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
@@ -349,400 +195,221 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
             ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            // IPOji Scraping Section
-            _buildScrapingSection(),
+            // API Data Storage Section
+            _buildDataFetchingSection(),
             const SizedBox(height: 24),
-            _buildSection(
-              'Company Information',
-              Icons.business,
-              [
-                _buildLinkField(
-                  controller: _companyLogoController,
-                  label: 'Company Logo URL',
-                  hint: 'Enter company logo URL',
-                  icon: Icons.image,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _expectedPremiumController,
-                  label: 'Expected Premium',
-                  hint: 'Enter expected premium value',
-                  icon: Icons.trending_up,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildSection(
-              'Company Details',
-              Icons.business_center,
-              [
-                _buildTextField(
-                  controller: _companyNameController,
-                  label: 'Company Name',
-                  hint: 'Enter company name',
-                  icon: Icons.business,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Company name is required';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _companyAddressController,
-                  label: 'Company Address',
-                  hint: 'Enter complete company address',
-                  icon: Icons.location_on,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _companyEmailController,
-                  label: 'Email',
-                  hint: 'Enter email address',
-                  icon: Icons.email,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value != null &&
-                        value.isNotEmpty &&
-                        !value.contains('@')) {
-                      return 'Please enter a valid email address';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _companyPhoneController,
-                  label: 'Phone',
-                  hint: 'Enter phone number',
-                  icon: Icons.phone,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                _buildLinkField(
-                  controller: _companyWebsiteController,
-                  label: 'Website',
-                  hint: 'Enter company website URL',
-                  icon: Icons.language,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildSection(
-              'Document Management',
-              Icons.description,
-              [
-                _buildLinkField(
-                  controller: _drhpLinkController,
-                  label: 'DRHP Document URL',
-                  hint: 'Enter DRHP document URL',
-                  icon: Icons.description,
-                ),
-                const SizedBox(height: 16),
-                _buildLinkField(
-                  controller: _rhpLinkController,
-                  label: 'RHP Document URL',
-                  hint: 'Enter RHP document URL',
-                  icon: Icons.article,
-                ),
-                const SizedBox(height: 16),
-                _buildLinkField(
-                  controller: _anchorLinkController,
-                  label: 'Anchor Document URL',
-                  hint: 'Enter anchor document URL',
-                  icon: Icons.anchor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            _buildSaveButton(),
-            const SizedBox(height: 32),
+            // Extra bottom padding for keyboard space
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildScrapingSection() {
+  Widget _buildDataFetchingSection() {
     return Container(
       margin: const EdgeInsets.only(bottom: 1),
       child: Card(
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.3),
-                Theme.of(context).colorScheme.surface,
-              ],
-            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Enhanced URL input field
+                // IPO Slug input field
                 TextFormField(
-                  controller: _ipojiUrlController,
+                  controller: _slugController,
                   decoration: InputDecoration(
-                    labelText: 'IPO Data Source URL',
-                    hintText: 'Paste the URL to scrape IPO information',
-                    prefixIcon: Container(
-                      margin: const EdgeInsets.all(8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.link,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    suffixIcon: _ipojiUrlController.text.isNotEmpty
+                    labelText: 'IPO Slug',
+                    hintText:
+                        'Enter the IPO slug (will be stored for future updates)',
+                    prefixIcon: const Icon(Icons.business),
+                    suffixIcon: _slugController.text.isNotEmpty
                         ? IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
+                            icon: const Icon(Icons.clear),
                             onPressed: () {
-                              _ipojiUrlController.clear();
+                              _slugController.clear();
                               setState(() {});
                             },
-                            tooltip: 'Clear URL',
+                            tooltip: 'Clear IPO Slug',
                           )
                         : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 2,
-                      ),
                     ),
                     filled: true,
                     fillColor: Theme.of(context).colorScheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    isDense: true,
                   ),
-                  onFieldSubmitted: (_) => _scrapeIpojiData(),
+                  onFieldSubmitted: (_) => _storeIpoData(),
                   onChanged: (value) => setState(() {}),
-                  keyboardType: TextInputType.url,
+                  keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.go,
                 ),
                 const SizedBox(height: 16),
 
-                // Enhanced action button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isScrapingLoading ||
-                            _ipojiUrlController.text.trim().isEmpty
-                        ? null
-                        : _scrapeIpojiData,
-                    icon: _isScrapingLoading
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).colorScheme.onPrimary,
-                              ),
-                            ),
+                // Image URL input field
+                TextFormField(
+                  controller: _imageUrlController,
+                  decoration: InputDecoration(
+                    labelText: 'Company Logo URL',
+                    hintText: 'Enter the company logo image URL',
+                    prefixIcon: const Icon(Icons.image),
+                    suffixIcon: _imageUrlController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _imageUrlController.clear();
+                              setState(() {});
+                            },
+                            tooltip: 'Clear Image URL',
                           )
-                        : Icon(
-                            Icons.auto_fix_high,
-                            size: 18,
-                          ),
-                    label: Text(
-                      _isScrapingLoading
-                          ? 'Extracting Data...'
-                          : 'Extract IPO Data',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isScrapingLoading ||
-                              _ipojiUrlController.text.trim().isEmpty
-                          ? Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                          : Theme.of(context).colorScheme.primary,
-                      foregroundColor: _isScrapingLoading ||
-                              _ipojiUrlController.text.trim().isEmpty
-                          ? Theme.of(context).colorScheme.onSurfaceVariant
-                          : Theme.of(context).colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: _isScrapingLoading ||
-                              _ipojiUrlController.text.trim().isEmpty
-                          ? 0
-                          : 3,
-                      shadowColor: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.3),
-                      minimumSize: const Size(0, 40),
-                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    isDense: true,
                   ),
+                  onFieldSubmitted: (_) => _saveAdditionalData(),
+                  onChanged: (value) => setState(() {}),
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 16),
+
+                // Expected Premium input field
+                TextFormField(
+                  controller: _expectedPremiumController,
+                  decoration: InputDecoration(
+                    labelText: 'Expected Premium',
+                    hintText: 'Enter expected premium (e.g., 15-20%)',
+                    prefixIcon: const Icon(Icons.trending_up),
+                    suffixIcon: _expectedPremiumController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _expectedPremiumController.clear();
+                              setState(() {});
+                            },
+                            tooltip: 'Clear Expected Premium',
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    isDense: true,
+                  ),
+                  onFieldSubmitted: (_) => _saveAdditionalData(),
+                  onChanged: (value) => setState(() {}),
+                  keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 16),
+
+                // Buttons in one row
+                Row(
+                  children: [
+                    // Save Additional Data button (Image URL & Expected Premium)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _isSavingAdditionalData ||
+                                (_imageUrlController.text.trim().isEmpty &&
+                                    _expectedPremiumController.text
+                                        .trim()
+                                        .isEmpty)
+                            ? null
+                            : _saveAdditionalData,
+                        icon: _isSavingAdditionalData
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.save_alt, size: 18),
+                        label: Text(
+                          _isSavingAdditionalData ? 'Saving...' : 'Save Data',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          minimumSize: const Size(0, 36),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.secondary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Store IPO Data button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            _isLoading || _slugController.text.trim().isEmpty
+                                ? null
+                                : _storeIpoData,
+                        icon: _isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.sync, size: 18),
+                        label: Text(
+                          _isLoading ? 'Merging...' : 'Merge IPO',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          minimumSize: const Size(0, 36),
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, IconData icon, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        ...children,
-      ],
-    );
-  }
-
-  Widget _buildLinkField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-  }) {
-    final hasUrl = controller.text.isNotEmpty;
-
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon),
-        suffixIcon: hasUrl
-            ? IconButton(
-                icon: const Icon(Icons.open_in_new, size: 20),
-                onPressed: () => _launchUrl(controller.text),
-                tooltip: 'Open link',
-              )
-            : null,
-        border: const OutlineInputBorder(),
-      ),
-      validator: _validateUrl,
-      keyboardType: TextInputType.url,
-      maxLines: 2,
-      minLines: 1,
-      onChanged: (value) {
-        setState(() {}); // Rebuild to show/hide open link button
-      },
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon),
-        border: const OutlineInputBorder(),
-      ),
-      keyboardType: keyboardType ?? TextInputType.text,
-      maxLines: maxLines,
-      validator: validator,
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ElevatedButton.icon(
-        onPressed: _isLoading ? null : _saveDocumentLinks,
-        icon: _isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.save),
-        label: Text(_isLoading ? 'Saving...' : 'Save Changes'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
         ),
       ),
     );

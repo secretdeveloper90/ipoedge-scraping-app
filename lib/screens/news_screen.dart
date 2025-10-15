@@ -13,7 +13,13 @@ class _NewsScreenState extends State<NewsScreen> {
   String? _error;
   String _selectedCategory = 'All';
 
-  final List<String> _categories = ['All', 'IPO', 'Market', 'Economy', 'Technology'];
+  final List<String> _categories = [
+    'All',
+    'IPO',
+    'Market',
+    'Economy',
+    'Technology'
+  ];
 
   @override
   void initState() {
@@ -30,13 +36,14 @@ class _NewsScreenState extends State<NewsScreen> {
     try {
       // Simulate API call - replace with actual Firebase/API integration
       await Future.delayed(const Duration(seconds: 1));
-      
+
       // Mock data for demonstration
       final mockNews = [
         NewsItem(
           id: '1',
           title: 'Major IPO Launch Expected Next Week',
-          summary: 'Tech giant announces plans for public offering with estimated valuation of \$50 billion',
+          summary:
+              'Tech giant announces plans for public offering with estimated valuation of \$50 billion',
           category: 'IPO',
           author: 'Financial Times',
           publishedAt: DateTime.now().subtract(const Duration(hours: 2)),
@@ -46,7 +53,8 @@ class _NewsScreenState extends State<NewsScreen> {
         NewsItem(
           id: '2',
           title: 'Market Reaches All-Time High',
-          summary: 'Stock indices close at record levels amid positive economic indicators',
+          summary:
+              'Stock indices close at record levels amid positive economic indicators',
           category: 'Market',
           author: 'Market Watch',
           publishedAt: DateTime.now().subtract(const Duration(hours: 4)),
@@ -66,7 +74,8 @@ class _NewsScreenState extends State<NewsScreen> {
         NewsItem(
           id: '4',
           title: 'Tech Sector Shows Strong Growth',
-          summary: 'Technology companies report better than expected quarterly results',
+          summary:
+              'Technology companies report better than expected quarterly results',
           category: 'Technology',
           author: 'Tech News',
           publishedAt: DateTime.now().subtract(const Duration(days: 1)),
@@ -115,7 +124,7 @@ class _NewsScreenState extends State<NewsScreen> {
 
   Widget _buildHeader() {
     final filteredCount = _filteredNews.length;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       padding: const EdgeInsets.all(6.0),
@@ -124,18 +133,18 @@ class _NewsScreenState extends State<NewsScreen> {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            Theme.of(context).primaryColor.withOpacity(0.1),
-            Theme.of(context).primaryColor.withOpacity(0.05),
+            Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            Theme.of(context).primaryColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).primaryColor.withOpacity(0.2),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -146,7 +155,7 @@ class _NewsScreenState extends State<NewsScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.15),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -174,7 +183,7 @@ class _NewsScreenState extends State<NewsScreen> {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   blurRadius: 6,
                   offset: const Offset(0, 3),
                 ),
@@ -205,7 +214,7 @@ class _NewsScreenState extends State<NewsScreen> {
         itemBuilder: (context, index) {
           final category = _categories[index];
           final isSelected = category == _selectedCategory;
-          
+
           return Container(
             margin: const EdgeInsets.only(right: 8),
             child: FilterChip(
@@ -216,10 +225,13 @@ class _NewsScreenState extends State<NewsScreen> {
                   _selectedCategory = category;
                 });
               },
-              selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+              selectedColor:
+                  Theme.of(context).primaryColor.withValues(alpha: 0.2),
               checkmarkColor: Theme.of(context).primaryColor,
               labelStyle: TextStyle(
-                color: isSelected ? Theme.of(context).primaryColor : Colors.grey[700],
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : Colors.grey[700],
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -237,7 +249,7 @@ class _NewsScreenState extends State<NewsScreen> {
     if (_error != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: Center(
             child: Column(
@@ -248,7 +260,8 @@ class _NewsScreenState extends State<NewsScreen> {
                 Text('Error loading news',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(_error!, textAlign: TextAlign.center,
+                Text(_error!,
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         )),
@@ -267,7 +280,7 @@ class _NewsScreenState extends State<NewsScreen> {
     if (_filteredNews.isEmpty) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: Center(
             child: Column(
@@ -313,7 +326,8 @@ class _NewsScreenState extends State<NewsScreen> {
               children: [
                 if (newsItem.isBreaking)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(12),
@@ -329,7 +343,8 @@ class _NewsScreenState extends State<NewsScreen> {
                   ),
                 if (newsItem.isBreaking) const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getCategoryColor(newsItem.category),
                     borderRadius: BorderRadius.circular(12),
@@ -382,7 +397,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 const Spacer(),
                 TextButton(
                   onPressed: () {
-                    // TODO: Navigate to full article
+                    // Feature not implemented: Navigate to full article
                   },
                   child: const Text('Read More'),
                 ),

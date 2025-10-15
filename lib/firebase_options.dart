@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // TODO: Replace these with your actual Firebase configuration
+  // NOTE: Replace these with your actual Firebase configuration
   // Get these values from Firebase Console > Project Settings > General > Your apps
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'YOUR_WEB_API_KEY', // Replace with your Web API Key

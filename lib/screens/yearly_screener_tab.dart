@@ -143,7 +143,7 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
     if (_error != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: Center(
             child: Column(
@@ -220,18 +220,18 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: [
-                Theme.of(context).primaryColor.withOpacity(0.08),
-                Theme.of(context).primaryColor.withOpacity(0.03),
+                Theme.of(context).primaryColor.withValues(alpha: 0.08),
+                Theme.of(context).primaryColor.withValues(alpha: 0.03),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).primaryColor.withOpacity(0.2),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
@@ -242,7 +242,7 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.15),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -271,7 +271,8 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.2),
+                      color:
+                          Theme.of(context).primaryColor.withValues(alpha: 0.2),
                       blurRadius: 3,
                       offset: const Offset(0, 1),
                     ),
@@ -294,7 +295,7 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
           child: _ipos.isEmpty
               ? SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  child: Container(
+                  child: SizedBox(
                     height: MediaQuery.of(context).size.height * 0.5,
                     child: Center(
                       child: Column(
@@ -348,7 +349,7 @@ class _YearlyScreenerTabState extends State<YearlyScreenerTab> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

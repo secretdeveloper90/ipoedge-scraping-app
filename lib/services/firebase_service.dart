@@ -11,9 +11,7 @@ class FirebaseService {
 
   static FirebaseFirestore? get firestore {
     try {
-      if (_firestore == null) {
-        _firestore = FirebaseFirestore.instance;
-      }
+      _firestore ??= FirebaseFirestore.instance;
       return _firestore;
     } catch (e) {
       return null;
@@ -51,6 +49,358 @@ class FirebaseService {
       return docRef.id;
     } catch (e) {
       throw Exception('Error adding IPO: $e');
+    }
+  }
+
+  // Find IPO by slug
+  static Future<IpoModel?> findIpoBySlug(String slug) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // First try to find by slug field
+      final slugQuery = await db
+          .collection(iposCollectionName)
+          .where('slug', isEqualTo: slug)
+          .limit(1)
+          .get();
+
+      if (slugQuery.docs.isNotEmpty) {
+        final doc = slugQuery.docs.first;
+        return IpoModel.fromFirestore(doc.data(), doc.id);
+      }
+
+      // If not found by slug, try to find by company name derived from slug
+      final companyName = slug
+          .replaceAll('-', ' ')
+          .split(' ')
+          .map((word) => word[0].toUpperCase() + word.substring(1))
+          .join(' ');
+
+      final nameQuery = await db
+          .collection(iposCollectionName)
+          .where('companyName', isEqualTo: companyName)
+          .limit(1)
+          .get();
+
+      if (nameQuery.docs.isNotEmpty) {
+        final doc = nameQuery.docs.first;
+        return IpoModel.fromFirestore(doc.data(), doc.id);
+      }
+
+      return null;
+    } catch (e) {
+      throw Exception('Error finding IPO by slug: $e');
+    }
+  }
+
+  // Add IPO with specific data fields only
+  static Future<String> addIpoWithSpecificData(
+      Map<String, dynamic> apiData, String slug) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final firestoreData = _extractSpecificFields(apiData, slug);
+      final docRef = await db.collection(iposCollectionName).add(firestoreData);
+      return docRef.id;
+    } catch (e) {
+      throw Exception('Error adding IPO with specific data: $e');
+    }
+  }
+
+  // Update existing IPO with specific data fields only (MERGE, don't overwrite)
+  static Future<void> updateIpoWithSpecificData(
+      String docId, Map<String, dynamic> apiData, String slug) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final updateData = _extractSpecificFieldsForUpdate(apiData, slug);
+      updateData['_firebaseUpdatedAt'] = DateTime.now();
+
+      // Use set with merge: true to merge data instead of overwriting
+      await db.collection(iposCollectionName).doc(docId).set(
+            updateData,
+            SetOptions(
+                merge:
+                    true), // This preserves existing data and only updates/adds new fields
+          );
+    } catch (e) {
+      throw Exception('Error updating IPO with specific data: $e');
+    }
+  }
+
+  // Extract only the specific fields you want to store
+  static Map<String, dynamic> _extractSpecificFields(
+      Map<String, dynamic> apiData, String? slug) {
+    final firestoreData = <String, dynamic>{};
+
+    // Add Firebase metadata
+    firestoreData['_firebaseCreatedAt'] = DateTime.now();
+    firestoreData['_firebaseUpdatedAt'] = DateTime.now();
+
+    // Add slug if provided (for new documents)
+    if (slug != null) {
+      firestoreData['slug'] = slug;
+    }
+
+    // Store root level fields: IPOstatus, peersComparison, financialLotsize
+    if (apiData['IPOstatus'] != null) {
+      firestoreData['IPOstatus'] = apiData['IPOstatus'];
+    }
+    if (apiData['peersComparison'] != null) {
+      firestoreData['peersComparison'] = apiData['peersComparison'];
+    }
+    if (apiData['financialLotsize'] != null) {
+      firestoreData['financialLotsize'] = apiData['financialLotsize'];
+      // Note: lot_details_message generation removed - will be handled on frontend
+    }
+
+    // Store document_links: {DRHPDraft, RHPDraft, AnchorInvestors}
+    final documentLinks = <String, dynamic>{};
+    if (apiData['DRHPDraft'] != null) {
+      documentLinks['DRHPDraft'] = apiData['DRHPDraft'];
+    }
+    if (apiData['RHPDraft'] != null) {
+      documentLinks['RHPDraft'] = apiData['RHPDraft'];
+    }
+    if (apiData['AnchorInvestors'] != null) {
+      documentLinks['AnchorInvestors'] = apiData['AnchorInvestors'];
+    }
+    if (documentLinks.isNotEmpty) {
+      firestoreData['document_links'] = documentLinks;
+    }
+
+    // Store registrar_details: {registerName, registerPhone, registerEmail, registerWebsite}
+    final registrarDetails = <String, dynamic>{};
+    if (apiData['registerName'] != null) {
+      registrarDetails['registerName'] = apiData['registerName'];
+    }
+    if (apiData['registerPhone'] != null) {
+      registrarDetails['registerPhone'] = apiData['registerPhone'];
+    }
+    if (apiData['registerEmail'] != null) {
+      registrarDetails['registerEmail'] = apiData['registerEmail'];
+    }
+    if (apiData['registerWebsite'] != null) {
+      registrarDetails['registerWebsite'] = apiData['registerWebsite'];
+    }
+    if (registrarDetails.isNotEmpty) {
+      firestoreData['registrar_details'] = registrarDetails;
+    }
+
+    // Store company_details: {companyName, address, companyPhone, email, website}
+    final companyDetails = <String, dynamic>{};
+    if (apiData['companyName'] != null) {
+      companyDetails['companyName'] = apiData['companyName'];
+    }
+    if (apiData['address'] != null) {
+      companyDetails['address'] = apiData['address'];
+    }
+    if (apiData['companyPhone'] != null) {
+      companyDetails['companyPhone'] = apiData['companyPhone'];
+    }
+    if (apiData['email'] != null) {
+      companyDetails['email'] = apiData['email'];
+    }
+    if (apiData['website'] != null) {
+      companyDetails['website'] = apiData['website'];
+    }
+    if (companyDetails.isNotEmpty) {
+      firestoreData['company_details'] = companyDetails;
+    }
+
+    return firestoreData;
+  }
+
+  // Extract ONLY the specific fields you requested for updating existing documents
+  static Map<String, dynamic> _extractSpecificFieldsForUpdate(
+      Map<String, dynamic> apiData, String slug) {
+    final updateData = <String, dynamic>{};
+
+    // Store the slug for easy future updates
+    updateData['slug'] = slug;
+
+    // Store ONLY these root level fields: IPOstatus, peersComparison, financialLotsize, GMP
+    if (apiData.containsKey('IPOstatus')) {
+      updateData['IPOstatus'] = apiData['IPOstatus'];
+    }
+    if (apiData.containsKey('peersComparison')) {
+      updateData['peersComparison'] = apiData['peersComparison'];
+    }
+    if (apiData.containsKey('GMP')) {
+      updateData['GMP'] = apiData['GMP'];
+    }
+    if (apiData.containsKey('financialLotsize')) {
+      updateData['financialLotsize'] = apiData['financialLotsize'];
+    }
+
+    // Note: lot_details_message generation removed - will be handled on frontend
+
+    // Store document_links ONLY if the specific fields exist: {DRHPDraft, RHPDraft, AnchorInvestors}
+    final documentLinks = <String, dynamic>{};
+    if (apiData.containsKey('DRHPDraft')) {
+      documentLinks['DRHPDraft'] = apiData['DRHPDraft'];
+    }
+    if (apiData.containsKey('RHPDraft')) {
+      documentLinks['RHPDraft'] = apiData['RHPDraft'];
+    }
+    if (apiData.containsKey('AnchorInvestors')) {
+      documentLinks['AnchorInvestors'] = apiData['AnchorInvestors'];
+    }
+    if (documentLinks.isNotEmpty) {
+      updateData['document_links'] = documentLinks;
+    }
+
+    // Store registrar_details ONLY if the specific fields exist: {registerName, registerPhone, registerEmail, registerWebsite}
+    final registrarDetails = <String, dynamic>{};
+    if (apiData.containsKey('registerName')) {
+      registrarDetails['registerName'] = apiData['registerName'];
+    }
+    if (apiData.containsKey('registerPhone')) {
+      registrarDetails['registerPhone'] = apiData['registerPhone'];
+    }
+    if (apiData.containsKey('registerEmail')) {
+      registrarDetails['registerEmail'] = apiData['registerEmail'];
+    }
+    if (apiData.containsKey('registerWebsite')) {
+      registrarDetails['registerWebsite'] = apiData['registerWebsite'];
+    }
+    if (registrarDetails.isNotEmpty) {
+      updateData['registrar_details'] = registrarDetails;
+    }
+
+    // Store company_details ONLY if the specific fields exist: {companyName, address, companyPhone, email, website}
+    final companyDetails = <String, dynamic>{};
+    if (apiData.containsKey('companyName')) {
+      companyDetails['companyName'] = apiData['companyName'];
+    }
+    if (apiData.containsKey('address')) {
+      companyDetails['address'] = apiData['address'];
+    }
+    if (apiData.containsKey('companyPhone')) {
+      companyDetails['companyPhone'] = apiData['companyPhone'];
+    }
+    if (apiData.containsKey('email')) {
+      companyDetails['email'] = apiData['email'];
+    }
+    if (apiData.containsKey('website')) {
+      companyDetails['website'] = apiData['website'];
+    }
+    if (companyDetails.isNotEmpty) {
+      updateData['company_details'] = companyDetails;
+    }
+
+    return updateData;
+  }
+
+  // Get slug for a specific IPO by ID
+  static Future<String?> getSlugForIpo(String ipoId) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final docSnapshot =
+          await db.collection(iposCollectionName).doc(ipoId).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        return data?['slug']?.toString();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error fetching slug for IPO: $e');
+    }
+  }
+
+  // Get image URL for a specific IPO by ID
+  static Future<String?> getImageUrlForIpo(String ipoId) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final docSnapshot =
+          await db.collection(iposCollectionName).doc(ipoId).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        return data?['company_headers']?['company_logo']?.toString();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error fetching image URL for IPO: $e');
+    }
+  }
+
+  // Save image URL for a specific IPO by ID
+  static Future<void> saveImageUrl(String ipoId, String imageUrl) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await db.collection(iposCollectionName).doc(ipoId).set(
+        {
+          'company_headers': {
+            'company_logo': imageUrl,
+          },
+          '_firebaseUpdatedAt': DateTime.now(),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      throw Exception('Error saving image URL: $e');
+    }
+  }
+
+  // Get expected premium for a specific IPO by ID
+  static Future<String?> getExpectedPremiumForIpo(String ipoId) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final docSnapshot =
+          await db.collection(iposCollectionName).doc(ipoId).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        return data?['expected_premium']?.toString();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error fetching expected premium for IPO: $e');
+    }
+  }
+
+  // Save expected premium for a specific IPO by ID
+  static Future<void> saveExpectedPremium(
+      String ipoId, String expectedPremium) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await db.collection(iposCollectionName).doc(ipoId).set(
+        {
+          'expected_premium': expectedPremium,
+          '_firebaseUpdatedAt': DateTime.now(),
+        },
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      throw Exception('Error saving expected premium: $e');
     }
   }
 
@@ -176,19 +526,11 @@ class FirebaseService {
     }
   }
 
-  // Update company details and document links for an IPO
-  static Future<void> updateIpoDocumentLinksAndCompanyDetails(
+  // Update company logo and expected premium for an IPO
+  static Future<void> updateIpoCompanyInfo(
     String id, {
-    String? drhpLink,
-    String? rhpLink,
-    String? anchorLink,
     String? expectedPremium,
     String? companyLogo,
-    String? companyName,
-    String? companyAddress,
-    String? companyEmail,
-    String? companyPhone,
-    String? companyWebsite,
   }) async {
     final db = firestore;
     if (db == null) {
@@ -199,35 +541,6 @@ class FirebaseService {
       final updateData = <String, dynamic>{
         '_firebaseUpdatedAt': DateTime.now(),
       };
-
-      // Create nested document_links object
-      final documentLinksData = <String, String?>{};
-
-      if (drhpLink != null) {
-        if (drhpLink.isNotEmpty) {
-          documentLinksData['drhp'] = drhpLink;
-        }
-      }
-
-      if (rhpLink != null) {
-        if (rhpLink.isNotEmpty) {
-          documentLinksData['rhp'] = rhpLink;
-        }
-      }
-
-      if (anchorLink != null) {
-        if (anchorLink.isNotEmpty) {
-          documentLinksData['anchor'] = anchorLink;
-        }
-      }
-
-      // If we have any document links, update the nested object
-      if (documentLinksData.isNotEmpty) {
-        updateData['document_links'] = documentLinksData;
-      } else {
-        // If all links are empty, remove the document_links field
-        updateData['document_links'] = FieldValue.delete();
-      }
 
       // Handle expected premium at root level
       if (expectedPremium != null) {
@@ -247,52 +560,13 @@ class FirebaseService {
         }
       }
 
-      // Handle company details in nested object
-      final companyDetailsData = <String, dynamic>{};
-      bool hasCompanyDetails = false;
-
-      if (companyName != null && companyName.isNotEmpty) {
-        companyDetailsData['company_name'] = companyName;
-        hasCompanyDetails = true;
+      // Only update if there are fields to update
+      if (updateData.length > 1) {
+        // More than just the timestamp
+        await db.collection(iposCollectionName).doc(id).update(updateData);
       }
-
-      if (companyAddress != null) {
-        if (companyAddress.isNotEmpty) {
-          companyDetailsData['address'] = companyAddress;
-          hasCompanyDetails = true;
-        }
-      }
-
-      if (companyEmail != null) {
-        if (companyEmail.isNotEmpty) {
-          companyDetailsData['email'] = companyEmail;
-          hasCompanyDetails = true;
-        }
-      }
-
-      if (companyPhone != null) {
-        if (companyPhone.isNotEmpty) {
-          companyDetailsData['phone'] = companyPhone;
-          hasCompanyDetails = true;
-        }
-      }
-
-      if (companyWebsite != null) {
-        if (companyWebsite.isNotEmpty) {
-          companyDetailsData['website'] = companyWebsite;
-          hasCompanyDetails = true;
-        }
-      }
-
-      // If we have any company details, update the nested object
-      if (hasCompanyDetails) {
-        updateData['company_details'] = companyDetailsData;
-      }
-
-      await db.collection(iposCollectionName).doc(id).update(updateData);
     } catch (e) {
-      throw Exception(
-          'Error updating IPO document links and company details: $e');
+      throw Exception('Error updating IPO company info: $e');
     }
   }
 
@@ -373,8 +647,6 @@ class FirebaseService {
     }
 
     try {
-      print('Searching for company ID: $companyId in ipo_analysis collection');
-
       // Only check for these specific categories
       const allowedCategories = [
         'listing_soon',
@@ -393,8 +665,6 @@ class FirebaseService {
       ];
 
       for (final fieldName in searchFields) {
-        print('Trying field: $fieldName');
-
         final querySnapshot = await db
             .collection(collectionName)
             .where(fieldName, isEqualTo: companyId)
@@ -404,21 +674,14 @@ class FirebaseService {
         if (querySnapshot.docs.isNotEmpty) {
           final data = querySnapshot.docs.first.data();
           final category = data['category']?.toString();
-          print('Found match in field $fieldName, category: $category');
-
           // Only return category if it's in the allowed list
           if (category != null && allowedCategories.contains(category)) {
             return category;
-          } else {
-            print(
-                'Category $category is not in allowed categories: $allowedCategories');
           }
         }
       }
 
       // If exact match fails, try partial matching within allowed categories only
-      print(
-          'Exact match failed, trying partial matching in allowed categories...');
 
       // Query only documents with allowed categories
       for (final allowedCategory in allowedCategories) {
@@ -427,9 +690,6 @@ class FirebaseService {
             .where('category', isEqualTo: allowedCategory)
             .limit(50)
             .get();
-
-        print(
-            'Checking ${categoryDocs.docs.length} documents in category: $allowedCategory');
 
         for (final doc in categoryDocs.docs) {
           final data = doc.data();
@@ -443,8 +703,7 @@ class FirebaseService {
               if (lowerFieldValue.contains(lowerCompanyId) ||
                   lowerCompanyId.contains(lowerFieldValue)) {
                 final category = data['category']?.toString();
-                print(
-                    'Found partial match in field $fieldName: $fieldValue, category: $category');
+
                 return category;
               }
             }
@@ -452,11 +711,8 @@ class FirebaseService {
         }
       }
 
-      print(
-          'No match found for company ID: $companyId in allowed categories: $allowedCategories');
       return null;
     } catch (e) {
-      print('Error in getCategoryFromIpoAnalysis: $e');
       throw Exception('Error fetching category from IPO analysis: $e');
     }
   }
@@ -513,14 +769,8 @@ class FirebaseService {
 
         await db.collection(iposCollectionName).doc(id).update(updateData);
       } else {
-        // Debug: Show what's available in the collection
-        final debugData = await debugIpoAnalysisCollection();
-        print('Available IPO analysis data:');
-        for (final item in debugData) {
-          print('Doc: ${item['docId']}, Company fields: ${item}');
-        }
         throw Exception(
-            'Category not found in IPO analysis for company: $companyId. Check debug output above.');
+            'Category not found in IPO analysis for company: $companyId');
       }
     } catch (e) {
       throw Exception('Error updating category from analysis: $e');

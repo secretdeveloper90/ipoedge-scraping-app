@@ -127,7 +127,8 @@ class _ListingTabState extends State<ListingTab> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 3,
-                shadowColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                shadowColor:
+                    Theme.of(context).primaryColor.withValues(alpha: 0.3),
                 minimumSize: const Size(0, 44), // Medium button height
               ),
             ),
@@ -259,18 +260,18 @@ class _ListingTabState extends State<ListingTab> {
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: [
-                Theme.of(context).primaryColor.withOpacity(0.1),
-                Theme.of(context).primaryColor.withOpacity(0.05),
+                Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                Theme.of(context).primaryColor.withValues(alpha: 0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).primaryColor.withOpacity(0.2),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 6,
                 offset: const Offset(0, 1),
               ),
@@ -281,7 +282,7 @@ class _ListingTabState extends State<ListingTab> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.15),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -310,7 +311,8 @@ class _ListingTabState extends State<ListingTab> {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                      color:
+                          Theme.of(context).primaryColor.withValues(alpha: 0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -347,7 +349,7 @@ class _ListingTabState extends State<ListingTab> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

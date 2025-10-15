@@ -113,7 +113,7 @@ class IpojiScraperService {
         }
       }
     } catch (e) {
-      print('Error extracting company details: $e');
+      // Error extracting company details: $e
     }
 
     return companyDetails;
@@ -168,7 +168,7 @@ class IpojiScraperService {
         }
       }
     } catch (e) {
-      print('Error extracting document links: $e');
+      // Error extracting document links: $e
     }
 
     return documentLinks;
@@ -206,7 +206,7 @@ class IpojiScraperService {
         }
       }
     } catch (e) {
-      print('Error extracting company logo: $e');
+      // Error extracting company logo: $e
     }
     return null;
   }
@@ -258,7 +258,7 @@ class IpojiScraperService {
         }
       }
     } catch (e) {
-      print('Error extracting expected premium: $e');
+      // Error extracting expected premium: $e
     }
     return null;
   }

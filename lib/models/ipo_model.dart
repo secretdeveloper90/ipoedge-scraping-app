@@ -35,10 +35,13 @@ class IpoModel {
     return IpoModel(
       id: json['id']?.toString() ??
           json['ipo_id']?.toString() ??
+          json['ipoID']?.toString() ??
           companyHeaders?['ipo_id']?.toString(),
       companyId: json['companyId']?.toString() ??
           json['company_id']?.toString() ??
           json['ipo_id']?.toString() ??
+          json['ipoID']?.toString() ??
+          json['slug']?.toString() ??
           json['company_slug_name']?.toString() ??
           companyHeaders?['ipo_id']?.toString() ??
           companyHeaders?['company_slug_name']?.toString() ??
@@ -54,14 +57,19 @@ class IpoModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'])
           : null,
+      // Extract document links from API response
       drhpLink: json['drhpLink']?.toString() ??
+          json['DRHPDraft']?.toString() ??
           json['document_links']?['drhp']?.toString(),
       rhpLink: json['rhpLink']?.toString() ??
+          json['RHPDraft']?.toString() ??
           json['document_links']?['rhp']?.toString(),
       anchorLink: json['anchorLink']?.toString() ??
+          json['AnchorInvestors']?.toString() ??
           json['document_links']?['anchor']?.toString(),
-      expectedPremium: json['expectedPremium']?.toString(),
-      companyLogo: null, // Manually managed, don't populate from API
+      expectedPremium:
+          json['expectedPremium']?.toString() ?? json['GMP']?.toString(),
+      companyLogo: json['file']?.toString(), // Extract company logo from API
     );
   }
 
@@ -103,20 +111,86 @@ class IpoModel {
     firestoreData['_firebaseCreatedAt'] = createdAt ?? DateTime.now();
     firestoreData['_firebaseUpdatedAt'] = DateTime.now();
 
-    // Add document links as nested object
+    // Store specific fields from API response
+    if (additionalData != null) {
+      // Store IPOstatus, peersComparison, financialLotsize at root level
+      if (additionalData!['IPOstatus'] != null) {
+        firestoreData['IPOstatus'] = additionalData!['IPOstatus'];
+      }
+      if (additionalData!['peersComparison'] != null) {
+        firestoreData['peersComparison'] = additionalData!['peersComparison'];
+      }
+      if (additionalData!['financialLotsize'] != null) {
+        firestoreData['financialLotsize'] = additionalData!['financialLotsize'];
+
+        // Generate and store lot details message
+        final lotDetailsMessage = generateLotDetailsMessage(additionalData!);
+        if (lotDetailsMessage.isNotEmpty) {
+          firestoreData['lot_details_message'] = lotDetailsMessage;
+        }
+      }
+    }
+
+    // Store document_links as nested object
     final documentLinksData = <String, String?>{};
     if (drhpLink != null && drhpLink!.isNotEmpty) {
-      documentLinksData['drhp'] = drhpLink;
+      documentLinksData['DRHPDraft'] = drhpLink;
     }
     if (rhpLink != null && rhpLink!.isNotEmpty) {
-      documentLinksData['rhp'] = rhpLink;
+      documentLinksData['RHPDraft'] = rhpLink;
     }
     if (anchorLink != null && anchorLink!.isNotEmpty) {
-      documentLinksData['anchor'] = anchorLink;
+      documentLinksData['AnchorInvestors'] = anchorLink;
     }
 
     if (documentLinksData.isNotEmpty) {
       firestoreData['document_links'] = documentLinksData;
+    }
+
+    // Store registrar_details as nested object
+    if (additionalData != null) {
+      final registrarDetails = <String, dynamic>{};
+      if (additionalData!['registerName'] != null) {
+        registrarDetails['registerName'] = additionalData!['registerName'];
+      }
+      if (additionalData!['registerPhone'] != null) {
+        registrarDetails['registerPhone'] = additionalData!['registerPhone'];
+      }
+      if (additionalData!['registerEmail'] != null) {
+        registrarDetails['registerEmail'] = additionalData!['registerEmail'];
+      }
+      if (additionalData!['registerWebsite'] != null) {
+        registrarDetails['registerWebsite'] =
+            additionalData!['registerWebsite'];
+      }
+
+      if (registrarDetails.isNotEmpty) {
+        firestoreData['registrar_details'] = registrarDetails;
+      }
+    }
+
+    // Store company_details as nested object
+    if (additionalData != null) {
+      final companyDetails = <String, dynamic>{};
+      if (additionalData!['companyName'] != null) {
+        companyDetails['companyName'] = additionalData!['companyName'];
+      }
+      if (additionalData!['address'] != null) {
+        companyDetails['address'] = additionalData!['address'];
+      }
+      if (additionalData!['companyPhone'] != null) {
+        companyDetails['companyPhone'] = additionalData!['companyPhone'];
+      }
+      if (additionalData!['email'] != null) {
+        companyDetails['email'] = additionalData!['email'];
+      }
+      if (additionalData!['website'] != null) {
+        companyDetails['website'] = additionalData!['website'];
+      }
+
+      if (companyDetails.isNotEmpty) {
+        firestoreData['company_details'] = companyDetails;
+      }
     }
 
     // Add expected premium at root level
@@ -326,4 +400,96 @@ class IpoModel {
 
   bool get hasValidDocumentLinks =>
       isValidUrl(drhpLink) && isValidUrl(rhpLink) && isValidUrl(anchorLink);
+
+  // Generate lot details message from financialLotsize data
+  String generateLotDetailsMessage(Map<String, dynamic> data) {
+    try {
+      final companyName = data['companyName']?.toString() ?? 'IPO';
+      final lotSize = data['lotSize']?.toString();
+      final financialLotsize = data['financialLotsize'] as List<dynamic>?;
+
+      if (financialLotsize == null ||
+          financialLotsize.isEmpty ||
+          lotSize == null) {
+        return '';
+      }
+
+      // Find retail min, retail max, and HNI data
+      Map<String, dynamic>? retailMin;
+      Map<String, dynamic>? retailMax;
+      Map<String, dynamic>? hniMin;
+
+      for (final lot in financialLotsize) {
+        if (lot is Map<String, dynamic>) {
+          final application =
+              lot['application']?.toString().toLowerCase() ?? '';
+          if (application.contains('retail') && application.contains('min')) {
+            retailMin = lot;
+          } else if (application.contains('retail') &&
+              application.contains('max')) {
+            retailMax = lot;
+          } else if ((application.contains('hni') ||
+                  application.contains('b-hni')) &&
+              application.contains('min')) {
+            hniMin = lot;
+          }
+        }
+      }
+
+      if (retailMin == null || retailMax == null) {
+        return '';
+      }
+
+      // Format amounts with Indian currency formatting
+      final minAmount = _formatIndianCurrency(retailMin['amount']);
+      final maxAmount = _formatIndianCurrency(retailMax['amount']);
+      final hniAmount =
+          hniMin != null ? _formatIndianCurrency(hniMin['amount']) : '';
+
+      // Build the message
+      final buffer = StringBuffer();
+      buffer.write(
+          'The $companyName minimum market lot is $lotSize shares with $minAmount application amount. ');
+      buffer.write(
+          'The retail investors can apply up-to ${retailMax['lots']} lots with ${retailMax['shares']} shares or $maxAmount amount.');
+
+      if (hniMin != null) {
+        buffer.write(
+            ' The HNIs can apply up-to ${hniMin['lots']} lots with ${hniMin['shares']} shares or $hniAmount amount.');
+      }
+
+      return buffer.toString();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // Helper method to format currency in Indian format
+  String _formatIndianCurrency(dynamic amount) {
+    if (amount == null) return '';
+
+    try {
+      final numAmount =
+          amount is num ? amount : num.tryParse(amount.toString());
+      if (numAmount == null) return amount.toString();
+
+      // Convert to string and add commas in Indian format
+      final amountStr = numAmount.toStringAsFixed(0);
+      final reversed = amountStr.split('').reversed.join();
+      final formatted = StringBuffer();
+
+      for (int i = 0; i < reversed.length; i++) {
+        if (i == 3) {
+          formatted.write(',');
+        } else if (i > 3 && (i - 3) % 2 == 0) {
+          formatted.write(',');
+        }
+        formatted.write(reversed[i]);
+      }
+
+      return '₹${formatted.toString().split('').reversed.join()}';
+    } catch (e) {
+      return amount.toString();
+    }
+  }
 }

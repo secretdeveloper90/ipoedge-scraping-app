@@ -56,7 +56,7 @@ class MyApp extends StatelessWidget {
         backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
         surfaceTintColor: colorScheme.surfaceTint,
-        shadowColor: colorScheme.shadow.withOpacity(0.3),
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
         titleTextStyle: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w600,
@@ -105,7 +105,7 @@ class MyApp extends StatelessWidget {
       // Enhanced Card Theme
       cardTheme: CardThemeData(
         elevation: 2,
-        shadowColor: colorScheme.shadow.withOpacity(0.15),
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
         surfaceTintColor: colorScheme.surfaceTint,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -163,7 +163,7 @@ class MyApp extends StatelessWidget {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 2,
-          shadowColor: colorScheme.shadow.withOpacity(0.3),
+          shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

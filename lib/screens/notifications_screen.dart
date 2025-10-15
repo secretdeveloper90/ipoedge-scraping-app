@@ -27,7 +27,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       // Simulate API call - replace with actual Firebase/API integration
       await Future.delayed(const Duration(seconds: 1));
-      
+
       // Mock data for demonstration
       final mockNotifications = [
         NotificationItem(
@@ -103,7 +103,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildHeader() {
     final unreadCount = _notifications.where((n) => !n.isRead).length;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       padding: const EdgeInsets.all(6.0),
@@ -112,18 +112,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            Theme.of(context).primaryColor.withOpacity(0.1),
-            Theme.of(context).primaryColor.withOpacity(0.05),
+            Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            Theme.of(context).primaryColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Theme.of(context).primaryColor.withOpacity(0.2),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -134,7 +134,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.15),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -163,7 +163,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.red.withOpacity(0.3),
+                    color: Colors.red.withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),
@@ -186,7 +186,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   blurRadius: 6,
                   offset: const Offset(0, 3),
                 ),
@@ -214,7 +214,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_error != null) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: Center(
             child: Column(
@@ -225,7 +225,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 Text('Error loading notifications',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(_error!, textAlign: TextAlign.center,
+                Text(_error!,
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         )),
@@ -244,7 +245,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_notifications.isEmpty) {
       return SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
           child: Center(
             child: Column(
@@ -294,7 +295,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text(
           notification.title,
           style: TextStyle(
-            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+            fontWeight:
+                notification.isRead ? FontWeight.normal : FontWeight.bold,
           ),
         ),
         subtitle: Column(

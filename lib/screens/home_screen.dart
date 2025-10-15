@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'ipo_screen.dart';
 import 'notifications_screen.dart';
 import 'news_screen.dart';
-import 'broker_screen.dart';
-import 'buyback_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,8 +17,6 @@ class _HomeScreenState extends State<HomeScreen> {
     const IpoScreen(),
     const NotificationsScreen(),
     const NewsScreen(),
-    const BrokerScreen(),
-    const BuybackScreen(),
   ];
 
   final List<_DrawerItem> _drawerItems = [
@@ -38,16 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.newspaper_rounded,
       label: 'Financial News',
       tooltip: 'Latest financial news and updates',
-    ),
-    const _DrawerItem(
-      icon: Icons.business_rounded,
-      label: 'Brokers',
-      tooltip: 'Broker information and management',
-    ),
-    const _DrawerItem(
-      icon: Icons.account_balance_wallet_rounded,
-      label: 'Buybacks',
-      tooltip: 'Stock buyback data and analysis',
     ),
   ];
 
@@ -74,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
             colors: [
               colorScheme.surface,
-              colorScheme.surface.withOpacity(0.95),
+              colorScheme.surface.withValues(alpha: 0.95),
             ],
           ),
         ),
@@ -94,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
+              color: colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -139,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomRight,
             colors: [
               colorScheme.surface,
-              colorScheme.surface.withOpacity(0.95),
+              colorScheme.surface.withValues(alpha: 0.95),
             ],
           ),
         ),
@@ -156,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
             colors: [
               colorScheme.surface,
-              colorScheme.surface.withOpacity(0.95),
+              colorScheme.surface.withValues(alpha: 0.95),
             ],
           ),
         ),
@@ -177,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       color: isSelected
-                          ? colorScheme.primary.withOpacity(0.1)
+                          ? colorScheme.primary.withValues(alpha: 0.1)
                           : Colors.transparent,
                     ),
                     child: ListTile(
@@ -225,8 +211,8 @@ class _HomeScreenState extends State<HomeScreen> {
           end: Alignment.bottomRight,
           colors: [
             colorScheme.primary,
-            colorScheme.primary.withOpacity(0.8),
-            colorScheme.secondary.withOpacity(0.6),
+            colorScheme.primary.withValues(alpha: 0.8),
+            colorScheme.secondary.withValues(alpha: 0.6),
           ],
           stops: const [0.0, 0.7, 1.0],
         ),
@@ -242,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 150,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -254,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -266,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -285,10 +271,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
@@ -298,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
+                              color: Colors.white.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
@@ -332,7 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: Colors.white.withOpacity(0.8),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.8),
                                         fontWeight: FontWeight.w400,
                                         fontSize: 11,
                                       ),
@@ -346,10 +333,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.3),
+                              color: Colors.green.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: Colors.green.withOpacity(0.5),
+                                color: Colors.green.withValues(alpha: 0.5),
                                 width: 1,
                               ),
                             ),
