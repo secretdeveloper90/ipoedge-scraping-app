@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ipo_screen.dart';
-import 'notifications_screen.dart';
-import 'news_screen.dart';
+import 'allotment_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,8 +14,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const IpoScreen(),
-    const NotificationsScreen(),
-    const NewsScreen(),
+    const AllotmentScreen(),
   ];
 
   final List<_DrawerItem> _drawerItems = [
@@ -26,14 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
       tooltip: 'Manage IPO listings and data',
     ),
     const _DrawerItem(
-      icon: Icons.notifications_rounded,
-      label: 'Notifications',
-      tooltip: 'View and manage notifications',
-    ),
-    const _DrawerItem(
-      icon: Icons.newspaper_rounded,
-      label: 'Financial News',
-      tooltip: 'Latest financial news and updates',
+      icon: Icons.assignment_turned_in_rounded,
+      label: 'Allotment',
+      tooltip: 'View IPO allotment status',
     ),
   ];
 
