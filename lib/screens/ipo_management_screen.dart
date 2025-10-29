@@ -16,11 +16,10 @@ class IpoManagementScreen extends StatefulWidget {
 }
 
 class _IpoManagementScreenState extends State<IpoManagementScreen> {
-  final _slugController = TextEditingController();
-  final _imageUrlController = TextEditingController();
-  final _expectedPremiumController = TextEditingController();
-  bool _isLoading = false;
-  bool _isSavingAdditionalData = false;
+  final _ipoDekhoSlugController = TextEditingController();
+  final _ipoTrendSlugController = TextEditingController();
+  bool _isLoadingDekho = false;
+  bool _isLoadingTrend = false;
 
   @override
   void initState() {
@@ -30,33 +29,28 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
 
   @override
   void dispose() {
-    _slugController.dispose();
-    _imageUrlController.dispose();
-    _expectedPremiumController.dispose();
+    _ipoDekhoSlugController.dispose();
+    _ipoTrendSlugController.dispose();
     super.dispose();
   }
 
-  // Load existing slug, image URL, and expected premium from Firebase if they exist
+  // Load existing slugs from Firebase if they exist
   Future<void> _loadExistingData() async {
     try {
       if (widget.ipo.id != null && widget.ipo.id!.isNotEmpty) {
         final existingSlug =
             await FirebaseService.getSlugForIpo(widget.ipo.id!);
-        final existingImageUrl =
-            await FirebaseService.getImageUrlForIpo(widget.ipo.id!);
-        final existingExpectedPremium =
-            await FirebaseService.getExpectedPremiumForIpo(widget.ipo.id!);
+
+        // Load BSEScriptCode from stock_data for IPO Trend slug
+        final bseScriptCode =
+            await FirebaseService.getBSEScriptCodeForIpo(widget.ipo.id!);
 
         setState(() {
           if (existingSlug != null && existingSlug.isNotEmpty) {
-            _slugController.text = existingSlug;
+            _ipoDekhoSlugController.text = existingSlug;
           }
-          if (existingImageUrl != null && existingImageUrl.isNotEmpty) {
-            _imageUrlController.text = existingImageUrl;
-          }
-          if (existingExpectedPremium != null &&
-              existingExpectedPremium.isNotEmpty) {
-            _expectedPremiumController.text = existingExpectedPremium;
+          if (bseScriptCode != null && bseScriptCode.isNotEmpty) {
+            _ipoTrendSlugController.text = bseScriptCode;
           }
         });
       }
@@ -75,62 +69,15 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
     );
   }
 
-  Future<void> _saveAdditionalData() async {
-    final imageUrl = _imageUrlController.text.trim();
-    final expectedPremium = _expectedPremiumController.text.trim();
-
-    if (imageUrl.isEmpty && expectedPremium.isEmpty) {
-      _showSnackBar(
-          'Please enter at least one field (Image URL or Expected Premium)',
-          isError: true);
-      return;
-    }
-
-    setState(() {
-      _isSavingAdditionalData = true;
-    });
-
-    try {
-      if (widget.ipo.id != null && widget.ipo.id!.isNotEmpty) {
-        List<String> savedFields = [];
-
-        // Save image URL if provided
-        if (imageUrl.isNotEmpty) {
-          await FirebaseService.saveImageUrl(widget.ipo.id!, imageUrl);
-          savedFields.add('Image URL');
-          _imageUrlController.clear();
-        }
-
-        // Save expected premium if provided
-        if (expectedPremium.isNotEmpty) {
-          await FirebaseService.saveExpectedPremium(
-              widget.ipo.id!, expectedPremium);
-          savedFields.add('Expected Premium');
-          _expectedPremiumController.clear();
-        }
-
-        _showSnackBar('${savedFields.join(' and ')} saved successfully!');
-      } else {
-        _showSnackBar('Error: No IPO ID found to update', isError: true);
-      }
-    } catch (e) {
-      _showSnackBar('Error saving data: $e', isError: true);
-    } finally {
-      setState(() {
-        _isSavingAdditionalData = false;
-      });
-    }
-  }
-
-  Future<void> _storeIpoData() async {
-    final slug = _slugController.text.trim();
+  Future<void> _storeIpoDekhoData() async {
+    final slug = _ipoDekhoSlugController.text.trim();
     if (slug.isEmpty) {
-      _showSnackBar('Please enter an IPO slug', isError: true);
+      _showSnackBar('Please enter an IPO Dekho slug', isError: true);
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _isLoadingDekho = true;
     });
 
     try {
@@ -150,19 +97,61 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
         );
 
         _showSnackBar(
-            'IPO data merged successfully! Existing data preserved. ID: ${widget.ipo.id}');
+            'IPO Dekho data merged successfully! ID: ${widget.ipo.id}');
       } else {
         _showSnackBar('Error: No IPO ID found to update', isError: true);
         return;
       }
 
       // Clear the slug field after successful storage
-      _slugController.clear();
+      _ipoDekhoSlugController.clear();
     } catch (e) {
-      _showSnackBar('Error storing IPO data: $e', isError: true);
+      _showSnackBar('Error storing IPO Dekho data: $e', isError: true);
     } finally {
       setState(() {
-        _isLoading = false;
+        _isLoadingDekho = false;
+      });
+    }
+  }
+
+  Future<void> _storeIpoTrendData() async {
+    final symbol = _ipoTrendSlugController.text.trim();
+    if (symbol.isEmpty) {
+      _showSnackBar('Please enter an IPO Trend symbol', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isLoadingTrend = true;
+    });
+
+    try {
+      // Fetch IPO details from IPO Trend API by symbol
+      final ipoData = await ApiService.getIpoDetailsBySymbol(symbol);
+
+      // Merge the new data with existing IPO using the IPO ID from widget
+      if (widget.ipo.id != null && widget.ipo.id!.isNotEmpty) {
+        // Merge IPO Trend data with existing IPO (preserves all existing fields)
+        await FirebaseService.updateIpoWithTrendData(
+          widget.ipo.id!,
+          ipoData,
+          symbol, // Pass the symbol for storage
+        );
+
+        _showSnackBar(
+            'IPO Trend data merged successfully! ID: ${widget.ipo.id}');
+      } else {
+        _showSnackBar('Error: No IPO ID found to update', isError: true);
+        return;
+      }
+
+      // Clear the symbol field after successful storage
+      _ipoTrendSlugController.clear();
+    } catch (e) {
+      _showSnackBar('Error storing IPO Trend data: $e', isError: true);
+    } finally {
+      setState(() {
+        _isLoadingTrend = false;
       });
     }
   }
@@ -184,7 +173,7 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
           ],
         ),
         actions: [
-          if (_isLoading)
+          if (_isLoadingDekho || _isLoadingTrend)
             const Padding(
               padding: EdgeInsets.all(16),
               child: SizedBox(
@@ -225,22 +214,21 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // IPO Slug input field
+                // IPO Dekho Slug input field
                 TextFormField(
-                  controller: _slugController,
+                  controller: _ipoDekhoSlugController,
                   decoration: InputDecoration(
-                    labelText: 'IPO Slug',
-                    hintText:
-                        'Enter the IPO slug (will be stored for future updates)',
+                    labelText: 'IPO Dekho Slug',
+                    hintText: 'Enter the IPO Dekho slug',
                     prefixIcon: const Icon(Icons.business),
-                    suffixIcon: _slugController.text.isNotEmpty
+                    suffixIcon: _ipoDekhoSlugController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
                             onPressed: () {
-                              _slugController.clear();
+                              _ipoDekhoSlugController.clear();
                               setState(() {});
                             },
-                            tooltip: 'Clear IPO Slug',
+                            tooltip: 'Clear IPO Dekho Slug',
                           )
                         : null,
                     border: OutlineInputBorder(
@@ -252,61 +240,64 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
                         horizontal: 16, vertical: 12),
                     isDense: true,
                   ),
-                  onFieldSubmitted: (_) => _storeIpoData(),
+                  onFieldSubmitted: (_) => _storeIpoDekhoData(),
                   onChanged: (value) => setState(() {}),
                   keyboardType: TextInputType.text,
                   textInputAction: TextInputAction.go,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Image URL input field
-                TextFormField(
-                  controller: _imageUrlController,
-                  decoration: InputDecoration(
-                    labelText: 'Company Logo URL',
-                    hintText: 'Enter the company logo image URL',
-                    prefixIcon: const Icon(Icons.image),
-                    suffixIcon: _imageUrlController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _imageUrlController.clear();
-                              setState(() {});
-                            },
-                            tooltip: 'Clear Image URL',
+                // Store IPO Dekho Data button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoadingDekho ||
+                            _ipoDekhoSlugController.text.trim().isEmpty
+                        ? null
+                        : _storeIpoDekhoData,
+                    icon: _isLoadingDekho
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                        : const Icon(Icons.sync, size: 18),
+                    label: Text(
+                      _isLoadingDekho ? 'Storing...' : 'Store IPO Dekho Data',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.surface,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    isDense: true,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      minimumSize: const Size(0, 40),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
                   ),
-                  onFieldSubmitted: (_) => _saveAdditionalData(),
-                  onChanged: (value) => setState(() {}),
-                  keyboardType: TextInputType.url,
-                  textInputAction: TextInputAction.done,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                // Expected Premium input field
+                // IPO Trend Slug input field
                 TextFormField(
-                  controller: _expectedPremiumController,
+                  controller: _ipoTrendSlugController,
                   decoration: InputDecoration(
-                    labelText: 'Expected Premium',
-                    hintText: 'Enter expected premium (e.g., 15-20%)',
+                    labelText: 'IPO Trend Slug',
+                    hintText: 'Enter the IPO Trend symbol (e.g., ORKLAINDIA)',
                     prefixIcon: const Icon(Icons.trending_up),
-                    suffixIcon: _expectedPremiumController.text.isNotEmpty
+                    suffixIcon: _ipoTrendSlugController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
                             onPressed: () {
-                              _expectedPremiumController.clear();
+                              _ipoTrendSlugController.clear();
                               setState(() {});
                             },
-                            tooltip: 'Clear Expected Premium',
+                            tooltip: 'Clear IPO Trend Slug',
                           )
                         : null,
                     border: OutlineInputBorder(
@@ -318,94 +309,47 @@ class _IpoManagementScreenState extends State<IpoManagementScreen> {
                         horizontal: 16, vertical: 12),
                     isDense: true,
                   ),
-                  onFieldSubmitted: (_) => _saveAdditionalData(),
+                  onFieldSubmitted: (_) => _storeIpoTrendData(),
                   onChanged: (value) => setState(() {}),
                   keyboardType: TextInputType.text,
-                  textInputAction: TextInputAction.done,
+                  textInputAction: TextInputAction.go,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Buttons in one row
-                Row(
-                  children: [
-                    // Save Additional Data button (Image URL & Expected Premium)
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isSavingAdditionalData ||
-                                (_imageUrlController.text.trim().isEmpty &&
-                                    _expectedPremiumController.text
-                                        .trim()
-                                        .isEmpty)
-                            ? null
-                            : _saveAdditionalData,
-                        icon: _isSavingAdditionalData
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.save_alt, size: 18),
-                        label: Text(
-                          _isSavingAdditionalData ? 'Saving...' : 'Save Data',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          minimumSize: const Size(0, 36),
-                          backgroundColor:
-                              Theme.of(context).colorScheme.secondary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onSecondary,
-                        ),
+                // Store IPO Trend Data button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoadingTrend ||
+                            _ipoTrendSlugController.text.trim().isEmpty
+                        ? null
+                        : _storeIpoTrendData,
+                    icon: _isLoadingTrend
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cloud_upload, size: 18),
+                    label: Text(
+                      _isLoadingTrend ? 'Storing...' : 'Store IPO Trend Data',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(width: 12),
-
-                    // Store IPO Data button
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed:
-                            _isLoading || _slugController.text.trim().isEmpty
-                                ? null
-                                : _storeIpoData,
-                        icon: _isLoading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.sync, size: 18),
-                        label: Text(
-                          _isLoading ? 'Merging...' : 'Merge IPO',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          minimumSize: const Size(0, 36),
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          foregroundColor:
-                              Theme.of(context).colorScheme.onPrimary,
-                        ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      minimumSize: const Size(0, 40),
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onSecondary,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),

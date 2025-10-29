@@ -301,6 +301,65 @@ class FirebaseService {
     return updateData;
   }
 
+  // Extract IPO Trend specific fields (gmp, key_performance_indicator, ipo_reservation, ipo_image)
+  static Map<String, dynamic> _extractIpoTrendFields(
+      Map<String, dynamic> apiData, String symbol) {
+    final updateData = <String, dynamic>{};
+
+    // Store the IPO Trend symbol for reference
+    updateData['ipo_trend_symbol'] = symbol;
+
+    // Extract data from nested structure: data.data
+    final nestedData = apiData['data']?['data'] as Map<String, dynamic>?;
+
+    if (nestedData != null) {
+      // Store gmp
+      if (nestedData.containsKey('gmp')) {
+        updateData['gmp'] = nestedData['gmp'];
+      }
+
+      // Store key_performance_indicator
+      if (nestedData.containsKey('key_performance_indicator')) {
+        updateData['key_performance_indicator'] =
+            nestedData['key_performance_indicator'];
+      }
+
+      // Store ipo_reservation
+      if (nestedData.containsKey('ipo_reservation')) {
+        updateData['ipo_reservation'] = nestedData['ipo_reservation'];
+      }
+
+      // Store ipo_image
+      if (nestedData.containsKey('ipo_image')) {
+        updateData['ipo_image'] = nestedData['ipo_image'];
+      }
+    }
+
+    return updateData;
+  }
+
+  // Update existing IPO with IPO Trend specific data fields
+  static Future<void> updateIpoWithTrendData(
+      String docId, Map<String, dynamic> apiData, String symbol) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final updateData = _extractIpoTrendFields(apiData, symbol);
+      updateData['_firebaseUpdatedAt'] = DateTime.now();
+
+      // Use set with merge: true to merge data instead of overwriting
+      await db.collection(iposCollectionName).doc(docId).set(
+            updateData,
+            SetOptions(merge: true),
+          );
+    } catch (e) {
+      throw Exception('Error updating IPO with trend data: $e');
+    }
+  }
+
   // Get slug for a specific IPO by ID
   static Future<String?> getSlugForIpo(String ipoId) async {
     final db = firestore;
@@ -318,6 +377,26 @@ class FirebaseService {
       return null;
     } catch (e) {
       throw Exception('Error fetching slug for IPO: $e');
+    }
+  }
+
+  // Get BSEScriptCode from stock_data for a specific IPO by ID
+  static Future<String?> getBSEScriptCodeForIpo(String ipoId) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final docSnapshot =
+          await db.collection(iposCollectionName).doc(ipoId).get();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        return data?['stock_data']?['BSEScriptCode']?.toString();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error fetching BSEScriptCode for IPO: $e');
     }
   }
 

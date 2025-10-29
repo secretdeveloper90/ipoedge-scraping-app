@@ -251,6 +251,28 @@ class ApiService {
     }
   }
 
+  // GET /api/ipos/ipo-symbol/:symbol – Fetch IPO details by symbol from IPO Trend
+  static Future<Map<String, dynamic>> getIpoDetailsBySymbol(
+      String symbol) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/ipos/ipo-symbol/$symbol'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else if (response.statusCode == 404) {
+        throw Exception('IPO details not found for symbol: $symbol');
+      } else {
+        throw Exception('Failed to load IPO details: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching IPO details for symbol $symbol: $e');
+    }
+  }
+
   // Helper method to check API connectivity
   static Future<bool> checkApiConnectivity() async {
     try {
