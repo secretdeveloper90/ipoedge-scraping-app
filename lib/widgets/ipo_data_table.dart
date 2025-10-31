@@ -430,7 +430,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
             children: [
               const Icon(Icons.warning, color: Colors.orange),
               const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontSize: 18)),
+              Text(title, style: const TextStyle(fontSize: 14)),
             ],
           ),
           content: Text(message),
@@ -528,7 +528,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
                   Expanded(
                     child: Text(
                       ipo.companyName ?? 'N/A',
-                      style: const TextStyle(fontSize: 18),
+                      style: const TextStyle(fontSize: 14),
                     ),
                   ),
                 ],
@@ -767,7 +767,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
                 headingTextStyle: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).primaryColor,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
                 headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                 columns: [
