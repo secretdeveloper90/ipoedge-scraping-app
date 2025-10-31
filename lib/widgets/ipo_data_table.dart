@@ -761,7 +761,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
               child: DataTable2(
                 columnSpacing: 0,
                 horizontalMargin: 0,
-                headingRowHeight: 40,
+                headingRowHeight: 48,
                 dataRowHeight: 52,
                 fixedTopRows: 1, // This makes the header fixed
                 headingTextStyle: TextStyle(
@@ -789,7 +789,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
                   ),
                   DataColumn2(
                     size: ColumnSize.L,
-                    fixedWidth: 230,
+                    fixedWidth: 205,
                     label: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       alignment: Alignment.centerLeft,
@@ -799,9 +799,9 @@ class _IpoDataTableState extends State<IpoDataTable> {
                   ),
                   DataColumn2(
                     size: ColumnSize.S,
-                    fixedWidth: 80,
+                    fixedWidth: 78,
                     label: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
                       alignment: Alignment.center,
                       child: const Text('Actions'),
                     ),
@@ -847,7 +847,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
                           width: double.infinity,
                           alignment: Alignment.center,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                              horizontal: 5, vertical: 2),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -858,7 +858,7 @@ class _IpoDataTableState extends State<IpoDataTable> {
                                 onPressed: () => _showSlugInputDialog(ipo),
                                 tooltip: 'Edit Slug',
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 3),
                               _buildActionButton(
                                 icon: Icons.refresh,
                                 color: Colors.orange,
