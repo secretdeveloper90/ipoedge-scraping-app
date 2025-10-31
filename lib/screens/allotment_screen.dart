@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/app_config.dart';
+import '../widgets/allotment_data_table.dart';
 
 class AllotmentScreen extends StatefulWidget {
   const AllotmentScreen({super.key});
@@ -15,7 +16,6 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
   List<Map<String, dynamic>> _allotments = [];
   bool _isLoading = true;
   bool _isAddingAllotment = false;
-  bool _isUpdatingAll = false;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -92,48 +92,6 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
       if (mounted) {
         setState(() {
           _isAddingAllotment = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _updateAll() async {
-    setState(() {
-      _isUpdatingAll = true;
-      _error = null;
-    });
-
-    try {
-      // Just reload from Firebase without calling API
-      await _loadAllotments();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Allotment data refreshed'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to refresh data: $e';
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_error!),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUpdatingAll = false;
         });
       }
     }
@@ -235,7 +193,6 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
         child: Column(
           children: [
             _buildUpdateButton(),
-            const Divider(),
             Expanded(child: _buildAllotmentsSection()),
           ],
         ),
@@ -245,85 +202,40 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
 
   Widget _buildUpdateButton() {
     return Container(
-      margin: const EdgeInsets.all(8),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _isAddingAllotment ? null : _addAllotedIPO,
-              icon: _isAddingAllotment
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    )
-                  : const Icon(Icons.add_rounded),
-              label: Text(
-                _isAddingAllotment ? 'Adding...' : 'Add Alloted IPO',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 14,vertical: 8),
+      child: ElevatedButton.icon(
+        onPressed: _isAddingAllotment ? null : _addAllotedIPO,
+        icon: _isAddingAllotment
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.onPrimary,
+                  ),
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 3,
-                shadowColor:
-                    Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                minimumSize: const Size(0, 44),
-              ),
-            ),
+              )
+            : const Icon(Icons.add_rounded),
+        label: Text(
+          _isAddingAllotment ? 'Adding...' : 'Add Alloted IPO',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _isUpdatingAll ? null : _updateAll,
-              icon: _isUpdatingAll
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    )
-                  : const Icon(Icons.refresh_rounded),
-              label: Text(
-                _isUpdatingAll ? 'Updating...' : 'Update All',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 3,
-                shadowColor:
-                    Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                minimumSize: const Size(0, 44),
-              ),
-            ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          elevation: 3,
+          shadowColor: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+          minimumSize: const Size(double.infinity, 44),
+        ),
       ),
     );
   }
@@ -332,94 +244,11 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeaderSection(),
         _buildSearchBar(),
         Expanded(
           child: _buildAllotmentsList(),
         ),
       ],
-    );
-  }
-
-  Widget _buildHeaderSection() {
-    final filteredAllotments = _getFilteredAllotments();
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 2.0),
-      padding: const EdgeInsets.all(4.0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Theme.of(context).primaryColor.withValues(alpha: 0.1),
-            Theme.of(context).primaryColor.withValues(alpha: 0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.assignment_turned_in_rounded,
-              size: 20,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Allotment Out IPOs',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                    letterSpacing: 0.2,
-                    fontSize: 16,
-                  ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Text(
-              _searchQuery.isNotEmpty
-                  ? '${filteredAllotments.length}/${_allotments.length}'
-                  : '${_allotments.length}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -549,7 +378,7 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Click "Add Alloted IPO" or "Update All" to fetch data',
+                  'Click "Add Alloted IPO" to fetch data',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey[600],
                       ),
@@ -596,87 +425,16 @@ class _AllotmentScreenState extends State<AllotmentScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: _buildAllotmentDataTable(filteredAllotments),
-    );
-  }
-
-  Widget _buildAllotmentDataTable(List<Map<String, dynamic>> allotments) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: AllotmentDataTable(allotments: filteredAllotments),
           ),
-        ],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        child: DataTable(
-          columnSpacing: 0,
-          horizontalMargin: 0,
-          headingRowHeight: 40,
-          dataRowMinHeight: 48,
-          dataRowMaxHeight: double.infinity,
-          headingTextStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-            fontSize: 13,
-          ),
-          columns: [
-            DataColumn(
-              label: Expanded(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  alignment: Alignment.centerLeft,
-                  child: const Text('IPO Name'),
-                ),
-              ),
-            ),
-          ],
-          rows: allotments
-              .map(
-                (allotment) => DataRow(
-                  cells: [
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        alignment: Alignment.topLeft,
-                        child: Wrap(
-                          alignment: WrapAlignment.start,
-                          children: [
-                            Text(
-                              allotment['iponame'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              .toList(),
-        ),
-      ),
+        );
+      },
     );
   }
 }

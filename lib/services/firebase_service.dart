@@ -8,6 +8,8 @@ class FirebaseService {
   static FirebaseFirestore? _firestore;
   static const String collectionName = 'ipo_analysis';
   static const String iposCollectionName = 'ipos';
+  static const String ipoManagementCollectionName = 'ipo_management';
+  static const String ipoRemainingDataCollectionName = 'ipo_remaining_data';
 
   static FirebaseFirestore? get firestore {
     try {
@@ -1425,6 +1427,523 @@ class FirebaseService {
       return categorizedIpos;
     } catch (e) {
       throw Exception('Error fetching IPO analysis data: $e');
+    }
+  }
+
+  // ==================== IPO MANAGEMENT COLLECTION METHODS ====================
+
+  /// Add IPO to ipo_management collection with hierarchical structure
+  /// Path: ipo_management/{ipoType}/{category}/{docId}
+  /// ipoType: 'mainboard' or 'sme'
+  /// category: 'live', 'upcoming', or 'listed'
+  /// orderIndex: Position in the list to maintain API order
+  static Future<String> addIpoToManagement({
+    required Map<String, dynamic> ipoData,
+    required String ipoType, // 'mainboard' or 'sme'
+    required String category, // 'live', 'upcoming', or 'listed'
+    int? orderIndex, // Position in the list
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Validate ipoType
+      if (ipoType != 'mainboard' && ipoType != 'sme') {
+        throw Exception('Invalid ipoType. Must be "mainboard" or "sme"');
+      }
+
+      // Validate category
+      if (category != 'live' &&
+          category != 'upcoming' &&
+          category != 'listed') {
+        throw Exception(
+            'Invalid category. Must be "live", "upcoming", or "listed"');
+      }
+
+      // Add Firebase metadata and exclude fields managed separately
+      final dataToStore = Map<String, dynamic>.from(ipoData);
+
+      // Remove fields that are managed separately
+      dataToStore.remove('slug');
+      dataToStore.remove('financialLotsize');
+      dataToStore.remove('document_links');
+      dataToStore.remove('registrar_details');
+      dataToStore.remove('company_details');
+      dataToStore.remove('ObjectOfIssue');
+      dataToStore.remove('promotersName');
+      dataToStore.remove('important_dates');
+      dataToStore.remove('quota');
+      dataToStore.remove('_docId');
+
+      dataToStore['_firebaseCreatedAt'] = DateTime.now();
+      dataToStore['_firebaseUpdatedAt'] = DateTime.now();
+      dataToStore['ipoType'] = ipoType;
+      dataToStore['_orderIndex'] = orderIndex ?? 0;
+
+      // Create document in hierarchical structure
+      final docRef = await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .add(dataToStore);
+
+      return docRef.id;
+    } catch (e) {
+      throw Exception('Error adding IPO to management: $e');
+    }
+  }
+
+  /// Update IPO in ipo_management collection
+  static Future<void> updateIpoInManagement({
+    required String docId,
+    required Map<String, dynamic> ipoData,
+    required String ipoType,
+    required String category,
+    int? orderIndex,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Validate ipoType and category
+      if (ipoType != 'mainboard' && ipoType != 'sme') {
+        throw Exception('Invalid ipoType. Must be "mainboard" or "sme"');
+      }
+      if (category != 'live' &&
+          category != 'upcoming' &&
+          category != 'listed') {
+        throw Exception(
+            'Invalid category. Must be "live", "upcoming", or "listed"');
+      }
+
+      // Add update timestamp
+      final dataToUpdate = Map<String, dynamic>.from(ipoData);
+      dataToUpdate['_firebaseUpdatedAt'] = DateTime.now();
+      if (orderIndex != null) {
+        dataToUpdate['_orderIndex'] = orderIndex;
+      }
+
+      // Update document
+      await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .doc(docId)
+          .set(dataToUpdate, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Error updating IPO in management: $e');
+    }
+  }
+
+  /// Update IPO in ipo_management collection with IPO Dekho data
+  static Future<void> updateIpoInManagementWithDekhoData({
+    required int ipoId,
+    required String ipoType,
+    required String category,
+    required Map<String, dynamic> apiData,
+    required String slug,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Validate ipoType and category
+      if (ipoType != 'mainboard' && ipoType != 'sme') {
+        throw Exception('Invalid ipoType. Must be "mainboard" or "sme"');
+      }
+      if (category != 'live' &&
+          category != 'upcoming' &&
+          category != 'listed') {
+        throw Exception(
+            'Invalid category. Must be "live", "upcoming", or "listed"');
+      }
+
+      // Find the document with the matching IPO id
+      final querySnapshot = await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .where('id', isEqualTo: ipoId)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        throw Exception('IPO not found in management collection');
+      }
+
+      final docId = querySnapshot.docs.first.id;
+
+      // Extract the specific fields from API data
+      final updateData = _extractIpoDekhoFieldsForManagement(apiData, slug);
+      updateData['_firebaseUpdatedAt'] = DateTime.now();
+
+      // Update document with merge
+      await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .doc(docId)
+          .set(updateData, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Error updating IPO in management with Dekho data: $e');
+    }
+  }
+
+  /// Extract IPO Dekho fields for management collection
+  static Map<String, dynamic> _extractIpoDekhoFieldsForManagement(
+      Map<String, dynamic> apiData, String slug) {
+    final updateData = <String, dynamic>{};
+
+    try {
+      // Store the slug
+      updateData['slug'] = slug;
+
+      // Store root level fields: financialLotsize (can be Map or List)
+      if (apiData['financialLotsize'] != null) {
+        // Store as-is without type casting
+        updateData['financialLotsize'] = apiData['financialLotsize'];
+      }
+
+      // Store root level fields: ObjectOfIssue, faceValue, issueType, promotersName
+      // These can be String or List, store as-is
+      if (apiData['ObjectOfIssue'] != null) {
+        updateData['ObjectOfIssue'] = apiData['ObjectOfIssue'];
+      }
+      if (apiData['faceValue'] != null) {
+        updateData['faceValue'] = apiData['faceValue'];
+      }
+      if (apiData['issueType'] != null) {
+        updateData['issueType'] = apiData['issueType'];
+      }
+      if (apiData['promotersName'] != null) {
+        updateData['promotersName'] = apiData['promotersName'];
+      }
+
+      // Store document_links: {DRHPDraft, RHPDraft, AnchorInvestors}
+      final documentLinks = <String, dynamic>{};
+      if (apiData['DRHPDraft'] != null) {
+        documentLinks['DRHPDraft'] = apiData['DRHPDraft'];
+      }
+      if (apiData['RHPDraft'] != null) {
+        documentLinks['RHPDraft'] = apiData['RHPDraft'];
+      }
+      if (apiData['AnchorInvestors'] != null) {
+        documentLinks['AnchorInvestors'] = apiData['AnchorInvestors'];
+      }
+      if (documentLinks.isNotEmpty) {
+        updateData['document_links'] = documentLinks;
+      }
+
+      // Store important_dates: {IPOAllotmentDate, IPOCloseDate, IPODematTransfer, IPOListingDate, IPOOpenDate, IPORefundsInitiation}
+      final importantDates = <String, dynamic>{};
+      if (apiData['IPOAllotmentDate'] != null) {
+        importantDates['IPOAllotmentDate'] = apiData['IPOAllotmentDate'];
+      }
+      if (apiData['IPOCloseDate'] != null) {
+        importantDates['IPOCloseDate'] = apiData['IPOCloseDate'];
+      }
+      if (apiData['IPODematTransfer'] != null) {
+        importantDates['IPODematTransfer'] = apiData['IPODematTransfer'];
+      }
+      if (apiData['IPOListingDate'] != null) {
+        importantDates['IPOListingDate'] = apiData['IPOListingDate'];
+      }
+      if (apiData['IPOOpenDate'] != null) {
+        importantDates['IPOOpenDate'] = apiData['IPOOpenDate'];
+      }
+      if (apiData['IPORefundsInitiation'] != null) {
+        importantDates['IPORefundsInitiation'] =
+            apiData['IPORefundsInitiation'];
+      }
+      if (importantDates.isNotEmpty) {
+        updateData['important_dates'] = importantDates;
+      }
+
+      // Store quota: {nilQuota, qibQuota, retailQuota}
+      // These can be String, Map, or List, store as-is
+      if (apiData['nilQuota'] != null ||
+          apiData['qibQuota'] != null ||
+          apiData['retailQuota'] != null) {
+        final quota = <String, dynamic>{};
+        if (apiData['nilQuota'] != null) {
+          quota['nilQuota'] = apiData['nilQuota'];
+        }
+        if (apiData['qibQuota'] != null) {
+          quota['qibQuota'] = apiData['qibQuota'];
+        }
+        if (apiData['retailQuota'] != null) {
+          quota['retailQuota'] = apiData['retailQuota'];
+        }
+        if (quota.isNotEmpty) {
+          updateData['quota'] = quota;
+        }
+      }
+
+      // Store registrar_details: {registerName, registerPhone, registerEmail, registerWebsite}
+      final registrarDetails = <String, dynamic>{};
+      if (apiData['registerName'] != null) {
+        registrarDetails['registerName'] = apiData['registerName'];
+      }
+      if (apiData['registerPhone'] != null) {
+        registrarDetails['registerPhone'] = apiData['registerPhone'];
+      }
+      if (apiData['registerEmail'] != null) {
+        registrarDetails['registerEmail'] = apiData['registerEmail'];
+      }
+      if (apiData['registerWebsite'] != null) {
+        registrarDetails['registerWebsite'] = apiData['registerWebsite'];
+      }
+      if (registrarDetails.isNotEmpty) {
+        updateData['registrar_details'] = registrarDetails;
+      }
+
+      // Store company_details: {companyName, address, companyPhone, email, website}
+      final companyDetails = <String, dynamic>{};
+      if (apiData['companyName'] != null) {
+        companyDetails['companyName'] = apiData['companyName'];
+      }
+      if (apiData['address'] != null) {
+        companyDetails['address'] = apiData['address'];
+      }
+      if (apiData['companyPhone'] != null) {
+        companyDetails['companyPhone'] = apiData['companyPhone'];
+      }
+      if (apiData['email'] != null) {
+        companyDetails['email'] = apiData['email'];
+      }
+      if (apiData['website'] != null) {
+        companyDetails['website'] = apiData['website'];
+      }
+      if (companyDetails.isNotEmpty) {
+        updateData['company_details'] = companyDetails;
+      }
+    } catch (e) {
+      // Silently handle error - return whatever data we could extract
+    }
+
+    return updateData;
+  }
+
+  /// Get all IPOs from a specific category in ipo_management
+  /// Returns IPOs ordered by _orderIndex to maintain API order
+  static Future<List<Map<String, dynamic>>> getIposFromManagement({
+    required String ipoType,
+    required String category,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final querySnapshot = await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .orderBy('_orderIndex', descending: false)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['_docId'] = doc.id; // Store Firebase doc ID separately
+        return data;
+      }).toList();
+    } catch (e) {
+      throw Exception('Error fetching IPOs from management: $e');
+    }
+  }
+
+  /// Delete IPO from ipo_management collection
+  static Future<void> deleteIpoFromManagement({
+    required String docId,
+    required String ipoType,
+    required String category,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .doc(docId)
+          .delete();
+    } catch (e) {
+      throw Exception('Error deleting IPO from management: $e');
+    }
+  }
+
+  /// Clear all IPOs from a specific category in ipo_management collection
+  /// This is used when replacing all data with fresh API data
+  static Future<void> clearAllIposFromManagement({
+    required String ipoType,
+    required String category,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Get all documents in the category
+      final querySnapshot = await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .get();
+
+      // Delete all documents using batch operation
+      if (querySnapshot.docs.isNotEmpty) {
+        final batch = db.batch();
+        for (final doc in querySnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      throw Exception('Error clearing IPOs from management: $e');
+    }
+  }
+
+  /// Check if IPO exists in ipo_management by company ID
+  static Future<Map<String, dynamic>?> findIpoInManagement({
+    required int companyId,
+    required String ipoType,
+    required String category,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final querySnapshot = await db
+          .collection(ipoManagementCollectionName)
+          .doc(ipoType)
+          .collection(category)
+          .where('id', isEqualTo: companyId)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final data = querySnapshot.docs.first.data();
+        data['docId'] = querySnapshot.docs.first.id;
+        return data;
+      }
+
+      return null;
+    } catch (e) {
+      throw Exception('Error finding IPO in management: $e');
+    }
+  }
+
+  // ==================== IPO Remaining Data Methods ====================
+
+  /// Add or update IPO remaining data (IPO Dekho data) in Firebase
+  /// Structure: ipo_remaining_data/{ipoType}/{ipoId}
+  static Future<void> addOrUpdateIpoRemainingData({
+    required int ipoId,
+    required String companyName,
+    required Map<String, dynamic> remainingData,
+    required String ipoType, // 'mainboard' or 'sme'
+    required String category, // 'live', 'upcoming', or 'listed'
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      // Use ipoId as document ID for easy lookup
+      // Structure: ipo_remaining_data/{ipoType}/{ipoId}
+      final docRef = db
+          .collection(ipoRemainingDataCollectionName)
+          .doc(ipoType)
+          .collection('ipos')
+          .doc(ipoId.toString());
+
+      // Add metadata (category is not stored in the document)
+      final dataToStore = {
+        ...remainingData,
+        'ipoId': ipoId,
+        'companyName': companyName,
+        'ipoType': ipoType,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Check if document exists
+      final docSnapshot = await docRef.get();
+
+      if (docSnapshot.exists) {
+        // Update existing document (merge to preserve existing data)
+        await docRef.update(dataToStore);
+      } else {
+        // Create new document
+        dataToStore['createdAt'] = FieldValue.serverTimestamp();
+        await docRef.set(dataToStore);
+      }
+    } catch (e) {
+      throw Exception('Error adding/updating IPO remaining data: $e');
+    }
+  }
+
+  /// Get IPO remaining data by IPO ID
+  static Future<Map<String, dynamic>?> getIpoRemainingData({
+    required int ipoId,
+    required String ipoType,
+    required String category,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      final docSnapshot = await db
+          .collection(ipoRemainingDataCollectionName)
+          .doc(ipoType)
+          .collection('ipos')
+          .doc(ipoId.toString())
+          .get();
+
+      if (docSnapshot.exists) {
+        return docSnapshot.data();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Error getting IPO remaining data: $e');
+    }
+  }
+
+  /// Delete IPO remaining data
+  static Future<void> deleteIpoRemainingData({
+    required int ipoId,
+    required String ipoType,
+    required String category,
+  }) async {
+    final db = firestore;
+    if (db == null) {
+      throw Exception('Firebase not available');
+    }
+
+    try {
+      await db
+          .collection(ipoRemainingDataCollectionName)
+          .doc(ipoType)
+          .collection('ipos')
+          .doc(ipoId.toString())
+          .delete();
+    } catch (e) {
+      throw Exception('Error deleting IPO remaining data: $e');
     }
   }
 }

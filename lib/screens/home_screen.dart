@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'ipo_screen.dart';
 import 'allotment_screen.dart';
+import 'sme_ipo_screen.dart';
+import 'mainboard_ipo_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +16,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const IpoScreen(),
+    const SmeIpoScreen(),
+    const MainboardIpoScreen(),
     const AllotmentScreen(),
   ];
 
@@ -22,6 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.trending_up_rounded,
       label: 'IPO Management',
       tooltip: 'Manage IPO listings and data',
+    ),
+    const _DrawerItem(
+      icon: Icons.business_center_rounded,
+      label: 'SME IPO',
+      tooltip: 'Manage SME IPO listings',
+    ),
+    const _DrawerItem(
+      icon: Icons.account_balance_rounded,
+      label: 'Mainboard IPO',
+      tooltip: 'Manage Mainboard IPO listings',
     ),
     const _DrawerItem(
       icon: Icons.assignment_turned_in_rounded,

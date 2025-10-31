@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/ipo_model.dart';
+import '../models/new_ipo_model.dart';
 import '../models/ipo_analysis_models.dart';
 import '../config/app_config.dart';
 
@@ -270,6 +271,62 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error fetching IPO details for symbol $symbol: $e');
+    }
+  }
+
+  // GET /api/ipos/new-ipo-list – Fetch IPOs by type and category
+  static Future<List<NewIpoModel>> getNewIpoList({
+    required String ipoType, // 'mainboard' or 'sme'
+    required String category, // 'live', 'upcoming', or 'listed'
+    int pageSize = 500,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            '$baseUrl/api/ipos/new-ipo-list?ipo_type=$ipoType&category=$category&page_size=$pageSize'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(timeoutDuration);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+
+        // Response structure: { "success": true, "data": { "meta": {...}, "data": { "results": [...] } } }
+        if (responseData.containsKey('data') && responseData['data'] is Map) {
+          final outerData = responseData['data'] as Map<String, dynamic>;
+
+          if (outerData.containsKey('data') && outerData['data'] is Map) {
+            final innerData = outerData['data'] as Map<String, dynamic>;
+
+            if (innerData.containsKey('results') &&
+                innerData['results'] is List) {
+              final results = innerData['results'] as List<dynamic>;
+
+              if (results.isEmpty) {
+                return [];
+              }
+
+              try {
+                final ipoList = results
+                    .map((item) =>
+                        NewIpoModel.fromJson(item as Map<String, dynamic>))
+                    .toList();
+                return ipoList;
+              } catch (parseError) {
+                throw Exception('Error parsing IPO data: $parseError');
+              }
+            }
+          }
+        }
+
+        return [];
+      } else if (response.statusCode == 404) {
+        return [];
+      } else {
+        throw Exception('Failed to load IPOs: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(
+          'Error fetching IPOs (type: $ipoType, category: $category): $e');
     }
   }
 
